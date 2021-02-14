@@ -1,13 +1,15 @@
 using Distributions
 
-function loss_sample(err_place, nu_loss, m, n, xbasis)
-    loss_samples = zeros(n, m)
-    loss_norm = fill(1.0, (n, m))
+function loss_sample(err_place, nu_loss, m, n, xbasis, sample_no)
+    loss_samples = zeros(n, m, sample_no)
+    loss_norm = fill(1.0, (n, m, sample_no))
 
     if err_place == true
-        for i = 1:n
-            for j = 1:m
-                loss_samples[i, j], loss_norm[i, j] = loss_sample(nu_loss, xbasis)
+        for k = 1:sample_no
+            for i = 1:n
+                for j = 1:m
+                    loss_samples[i, j, k], loss_norm[i, j, k] = loss_sample(nu_loss, xbasis)
+                end
             end
         end
     end
@@ -15,15 +17,20 @@ function loss_sample(err_place, nu_loss, m, n, xbasis)
     return loss_samples, loss_norm
 end
 
-function dephase_sample(err_place, nu_dephase, m, n)
-    dephase_samples = zeros(n, m)
-    dephase_norm = fill(1.0, (n, m))
+function dephase_sample(err_place, nu_dephase, m, n, sample_no)
+    dephase_norm = fill(1.0, (n, m, sample_no))
+    d = Normal(0, nu_phi_1)
+
+    dephase_samples = zeros(n, m, sample_no)
 
     if err_place == true
-        for i = 1:n
-            for j = 1:m
-                dephase_angle =
-                dephase_samples[i, j], dephase_norm[i, j] = dephase_sample(nu_dephase, xbasis)
+        dephase_samples = rand(d, (n, m, sample_no))
+        
+        for k = 1:sample_no
+            for i = 1:n
+                for j = 1:m
+                    dephase_norm[i, j, k] =
+                end
             end
         end
     end
@@ -79,4 +86,34 @@ function discrete_loss_sampling(nu_l, xbasis)
     return k, loss_norm
 end
 
+function dephase_sample(nu_d)
+
+end
+
 ###############################################3
+
+function error_prep(loss, dephase, nu_l, xbasis, sample_no)
+    plus = xbasis[1]
+    min = xbasis[2]
+
+    a_b = xbasis[4]
+    n_b = xbasis[3]
+
+    E(x, phi, nu) = (((1 - exp(-nu))^(x/2))/(sqrtfactorial(big(x))))*exp((-nu_l/2 + phi)*dense(n_b))*a_b^(x)
+
+    row, col = size(loss[:, :, 1])
+
+    err_prep_plus = fill(E(loss[1, 1, 1], dephase[1, 1, 1], nu_l)*plus, (row, col, sample_no))
+    err_prep_min = fill(E(loss[1, 1, 1], dephase[1, 1, 1], nu_l)*min, (row, col, sample_no))
+
+    for k = 1:sample_no
+        for i = 1:row
+            for j = 1:col
+                err_prep_plus[i, j, k] = E(loss[i, j, k], dephase[i, j, k], nu_l)*plus
+                err_prep_min[i, j, k] = E(loss[i, j, k], dephase[i, j, k], nu_l)*min
+            end
+        end
+    end
+
+    return err_prep_plus, err_prep_min
+end
