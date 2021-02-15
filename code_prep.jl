@@ -16,7 +16,7 @@ function code_prep(N_ord, dim, alpha, code)
         n_b = number(b)
         a_b = destroy(b)
 
-        prep_state = [plus_cat, min_cat, n_b, a_b, zero_cat, one_cat, b, alpha]
+        prep_state = [plus_cat, min_cat, n_b, a_b, zero_cat, one_cat, b, alpha, dim]
 
     elseif code == "binomial"
         b = FockBasis(dim)
@@ -30,7 +30,7 @@ function code_prep(N_ord, dim, alpha, code)
         n_b = number(b)
         a_b = destroy(b)
 
-        prep_state = [plus_bin, min_bin, n_b, a_b, zero_bin, one_bin, b, N]
+        prep_state = [plus_bin, min_bin, n_b, a_b, zero_bin, one_bin, b, N, dim]
     end
 
     return prep_state

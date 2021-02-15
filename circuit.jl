@@ -29,14 +29,15 @@ function circuit(code, N_ord, dim, alpha, block_size, err_place, err_info, measu
     # First we pre-prepare the measurements to make it faster
     # first define the Krause operator for error
 
-
     err_prep_1_plus, err_prep_1_min = error_prep(loss_1, dephase_1, error_info[1], xbasis_1, sample_no)
     err_prep_2_plus, err_prep_2_min = error_prep(loss_2, dephase_2, error_info[2], xbasis_2, sample_no)
     err_prep_1 = [err_prep_1_plus, err_prep_1_min]
     err_prep_2 = [err_prep_2_plus, err_prep_2_min]
 
+    ###################################################################################################
+    #
 
-    samples_1 = measurement_samples(err_prep_1, err_prep_2, 1)
-    samples_2 = measurement_samples(err_prep_1, err_prep_2, 2)
+    samples_1 = measurement_samples(err_prep_1, err_prep_2, 1, measure, [xbasis_1, xbasis_2], N_ord)
+    samples_2 = measurement_samples(err_prep_1, err_prep_2, 2, measure, [xbasis_1, xbasis_2], N_ord)
 
 end
