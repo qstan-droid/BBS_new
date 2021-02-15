@@ -27,6 +27,10 @@ function measurement_samples(err_prep_1, err_prep_2, block_no, measure_type, xba
     meas_op_1 = measurement_operator(measure_type[1], xbasis[1], N_ord[1])
     meas_op_2 = measurement_operator(measure_type[2], xbasis[2], N_ord[2])
 
-    row, col, sample_no = size(err_prep_1)
+    if block_no == 1
+        row, col, sample_no = size(err_prep_1)
+    elseif block_no == 2
+        row, col, sample_no = size(err_prep_2)
+    end
 
 end
