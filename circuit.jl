@@ -24,7 +24,7 @@ function circuit(code, N_ord, dim, alpha, block_size, err_place, err_info, measu
     loss_1, dephase_1, loss_2, dephase_2 = error_propagation(loss_1, dephase_1, loss_2, dephase_2, block_size, N_ord, sample_no)
 
     # do measurements on both blocks
-    # measure = [measure_op_1, measure_op_2]
+    # measure = [measure_type_1, measure_type_2]
 
     # First we pre-prepare the measurements to make it faster
     # first define the Krause operator for error
@@ -35,9 +35,10 @@ function circuit(code, N_ord, dim, alpha, block_size, err_place, err_info, measu
     err_prep_2 = [err_prep_2_plus, err_prep_2_min]
 
     ###################################################################################################
-    #
+    # generate measurement samples
+    samples_1 = fill(0.0, (block_size[1], block_size[2], sample_no)) # this is just to fill in
 
-    samples_1 = measurement_samples(err_prep_1, err_prep_2, 1, measure, [xbasis_1, xbasis_2], N_ord)
-    samples_2 = measurement_samples(err_prep_1, err_prep_2, 2, measure, [xbasis_1, xbasis_2], N_ord)
+    samples_1 = measurement_samples(err_prep_1, err_prep_2, 1, measure, [xbasis_1, xbasis_2], N_ord, samples_1, code)
+    samples_2 = measurement_samples(err_prep_1, err_prep_2, 2, measure, [xbasis_1, xbasis_2], N_ord, samples_1, code)
 
 end
