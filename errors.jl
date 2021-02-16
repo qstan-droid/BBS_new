@@ -19,17 +19,17 @@ end
 
 function dephase_sample(err_place, nu_dephase, m, n, sample_no)
     dephase_norm = fill(1.0, (n, m, sample_no))
-    d = Normal(0, nu_phi_1)
+    d = Normal(0, nu_dephase)
 
     dephase_samples = zeros(n, m, sample_no)
 
     if err_place == true
         dephase_samples = rand(d, (n, m, sample_no))
-        
+
         for k = 1:sample_no
             for i = 1:n
                 for j = 1:m
-                    dephase_norm[i, j, k] =
+                    dephase_norm[i, j, k] = exp((dephase_samples[i, j, k]/nu_dephase)^2 /2)/(nu_dephase*sqrt(2*pi))
                 end
             end
         end
@@ -84,10 +84,6 @@ function discrete_loss_sampling(nu_l, xbasis)
     loss_norm = loss_pdf(nu_l, k, xbasis)
 
     return k, loss_norm
-end
-
-function dephase_sample(nu_d)
-
 end
 
 ###############################################3
