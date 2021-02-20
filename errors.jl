@@ -86,11 +86,14 @@ function discrete_loss_sampling(nu_l, xbasis)
     return k, loss_norm
 end
 
-###############################################3
+#################################################
 
 function error_prep(loss, dephase, nu_l, xbasis, sample_no)
     plus = xbasis[1]
     min = xbasis[2]
+
+    zero = xbasis[5]
+    one = xbasis[6]
 
     a_b = xbasis[4]
     n_b = xbasis[3]
@@ -101,15 +104,62 @@ function error_prep(loss, dephase, nu_l, xbasis, sample_no)
 
     err_prep_plus = fill(E(loss[1, 1, 1], dephase[1, 1, 1], nu_l)*plus, (row, col, sample_no))
     err_prep_min = fill(E(loss[1, 1, 1], dephase[1, 1, 1], nu_l)*min, (row, col, sample_no))
+    err_prep_zero = fill(E(loss[1, 1, 1], dephase[1, 1, 1], nu_l)*plus, (row, col, sample_no))
+    err_prep_one = fill(E(loss[1, 1, 1], dephase[1, 1, 1], nu_l)*min, (row, col, sample_no))
 
     for k = 1:sample_no
         for i = 1:row
             for j = 1:col
                 err_prep_plus[i, j, k] = E(loss[i, j, k], dephase[i, j, k], nu_l)*plus
                 err_prep_min[i, j, k] = E(loss[i, j, k], dephase[i, j, k], nu_l)*min
+                err_prep_zero[i, j, k] = E(loss[i, j, k], dephase[i, j, k], nu_l)*zero
+                err_prep_one[i, j, k] = E(loss[i, j, k], dephase[i, j, k], nu_l)*one
             end
         end
     end
 
-    return err_prep_plus, err_prep_min
+    return err_prep_plus, err_prep_min, err_prep_zero, err_prep_one
+end
+
+####### Find exp values for easy pdf construction
+
+function error_exp_1(err_prep_plus, err_prep_min)
+
+    row, col, sample_no = size(err_prep_plus)
+    err_exp_plus = fill(dagger(err_prep_plus[1, 1, 1])*err_prep_plus[1, 1, 1], (row, col, sample_no))
+    err_exp_min = fill(dagger(err_prep_min[1, 1, 1])*err_prep_min[1, 1, 1], (row, col, sample_no))
+
+    for k = 1:sample_no
+        for i = 1:row
+            for j = 1:col
+                err_exp_plus[i, j, k] = dagger(err_prep_plus[i, j, k])*err_prep_plus[i, j, k]
+                err_exp_min[i, j, k] = dagger(err_prep_min[i, j, k])*err_prep_min[i, j, k]
+            end
+        end
+    end
+
+    return err_exp_plus, err_exp_min
+end
+
+function error_exp_2(err_prep_zero, err_prep_one)
+
+    row, col, sample_no = size(err_prep_zero)
+
+    err_exp_zero = zeros(Complex(Float64), (row, col, sample_no))
+    err_exp_one = zeros(Complex(Float64), (row, col, sample_no))
+    err_exp_zo = zeros(Complex(Float64), (row, col, sample_no))
+    err_exp_oz = zeros(Complex(Float64), (row, col, sample_no))
+
+    for k = 1:sample_no
+        for i = 1:row
+            for j = 1:col
+                err_exp_zero[i, j, k] = dagger(err_prep_zero[i, j, k])*err_prep_zero[i, j, k]
+                err_exp_one[i, j, k] = dagger(err_prep_one[i, j, k])*err_prep_one[i, j, k]
+                err_exp_zo[i, j, k] = dagger(err_prep_zero[i, j, k])*err_prep_one[i, j, k]
+                err_exp_oz[i, j, k] = dagger(err_prep_one[i, j, k])*err_prep_zero[i, j, k]
+            end
+        end
+    end
+
+    return err_exp_zero, err_exp_one, err_exp_zo, err_exp_oz
 end

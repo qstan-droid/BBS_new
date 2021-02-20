@@ -20,8 +20,15 @@ function measuremet_operator(meas_type, xbasis, N_ord)
     return meas
 end
 
+# Finds expectation value of measurements
+function meas_exp(meas_op, sample, err_prep_plus, err_prep_min)
+    meas_exp_plus = dagger(err_prep_plus)*meas_op(sample)*err_prep_plus
+    meas_exp_min = dagger(err_prep_min)*meas_op(sample)*err_prep_min
+    return meas_exp_plus, meas_exp_min
+end
+
 ###########################
-function measurement_samples(err_prep_1, err_prep_2, block_no, measure_type, xbasis, N_ord, samples_1, code)
+function measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, xbasis, N_ord, samples_1, code, block_size)
 
     #### Rejection sampling
     meas_op_1 = measurement_operator(measure_type[1], xbasis[1], N_ord[1])
@@ -31,35 +38,42 @@ function measurement_samples(err_prep_1, err_prep_2, block_no, measure_type, xba
     # prepare the container for samples
     if block_no == 1
         row, col, sample_no = size(err_prep_1)
-        samples = zeros(row, col, sample_no)
-
     elseif block_no == 2
         row, col, sample_no = size(err_prep_2)
-        samples = zeros(row, col, sample_no)
     end
+
+    samples = zeros(Complex(Float64), row, col, sample_no)
+    norms = zeros(Complex(Float64), row, col, sample_no)
+
+    meas_exp_plus = zeros(Complex(Float64), row, col, sample_no)
+    meas_exp_min = zeros(Complex(Float64), row, col, sample_no)
+    meas_exp = [meas_exp_plus, meas_exp_min, meas_exp_pm, meas_exp_mp]
 
     for k = 1:sample_no
         for i = 1:row
             for j = 1:col
-                samples[i, j, k] = rejection_sampling(block_no, samples, samples_1, err_prep_1, err_prep_2, code, measure_type, [i, j, k], xbasis, meas_ops)
+                samples[i, j, k], meas_exp[1][i, j, k], meas_exp[2][i, j, k] = rejection_sampling(block_no, samples, samples_1, err_prep_1, err_prep_2, err_exp_1, err_exp_2, code, measure_type, [i, j, k], xbasis, meas_ops, meas_exp, block_size)
             end
         end
     end
 
+    return samples, meas_exp[1], meas_exp[2]
 end
 
-function rejection_sampling(block_no, samples, samples_1, err_prep_1, err_prep_2, code, measure_type, loc, xbasis, meas_ops)
+function rejection_sampling(block_no, samples, samples_1, err_prep_1, err_prep_2, err_exp_1, err_exp_2, code, measure_type, loc, xbasis, meas_ops, meas_exp, block_size)
 
     if block_no == 1
 
         # find the envelope constant function
-        ceil_constant = find_max_dist(block_no, samples, samples_1, measure_type, meas_ops, xbasis, code)*1.1
+        ceil_constant = find_max_dist(block_no, samples , samples_1, measure_type, meas_ops, xbasis, code)*1.1
         counter = false
 
         while counter == false
             # sample a measurement
             samples[loc[1], loc[2], loc[3]] = sample_generator(code, measure_type, xbasis[1])
-            f_x = pdf_1(samples, loc, xbasis, meas_ops, norms, err_prep_1, err_prep_2)
+            meas_exp_plus[1][loc[1], loc[2], loc[3]], meas_exp_min[2][loc[1], loc[2], loc[3]], meas_exp_pm[2][loc[1], loc[2], loc[3]], meas_exp_mp[2][loc[1], loc[2], loc[3]] = meas_exp(samples[loc[1], loc[2], loc[3]], err_prep_1[1], err_prep_1[2])
+
+            f_x = pdf_1(meas_exp[1][:, :, loc[3]], err_exp_1, err_exp_2, loc, block_size)
 
             # sample a random number between 1 and max
             u = rand(Uniform(0, ceil_constant))
@@ -84,7 +98,7 @@ function rejection_sampling(block_no, samples, samples_1, err_prep_1, err_prep_2
         end
     end
 
-    return samples[loc[1], loc[2], loc[3]], norms[loc[1], loc[2], loc[3]]
+    return samples[loc[1], loc[2], loc[3]], norms[loc[1], loc[2], loc[3]],
 end
 
 function find_max_dist(block_no, samples, samples_1, meas_type, meas_ops, xbasis, code)
@@ -181,10 +195,24 @@ end
 
 #######################
 # Probability functions
-function pdf_1(samples, loc, xbasis, meas_ops, norms, err_prep_1, err_prep_2)
+function pdf_1(meas_exp_1, err_exp_1, err_exp_2, loc, block_size)
 
-    B_plus = 
-    B_min =
+    # setup all of the matrices
+    no_row = block_size[1]
+    no_col = block_size[2]
+    rep = block_size[3]
+
+    err_exp_2_zero = err_exp_2[1][:, :, loc[3]]
+    err_exp_2_one = err_exp_2[2][:, :, loc[3]]
+    err_exp_2_zo = err_exp_2[3][:, :, loc[3]]
+    err_exp_2_oz = err_exp_2[4][:, :, loc[3]]
+
+    err_exp_1_plus = err_exp_1[1][:, :, loc[3]]
+    err_exp_1_min = err_exp_1[2][:, :, loc[3]]
+
+    # pdf begins
+
+    B = sum(sum( for j = 1:no_col) for i = 1:no_row)
 
 end
 
