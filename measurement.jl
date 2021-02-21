@@ -24,7 +24,10 @@ end
 function meas_exp(meas_op, sample, err_prep_plus, err_prep_min)
     meas_exp_plus = dagger(err_prep_plus)*meas_op(sample)*err_prep_plus
     meas_exp_min = dagger(err_prep_min)*meas_op(sample)*err_prep_min
-    return meas_exp_plus, meas_exp_min
+    meas_exp_pm = dagger(err_prep_plus)*meas_op(sample)*err_prep_min
+    meas_exp_mp = dagger(err_prep_min)*meas_op(sample)*err_prep_plus
+
+    return meas_exp_plus, meas_exp_min, meas_exp_pm, meas_exp_mp
 end
 
 ###########################
@@ -47,17 +50,20 @@ function measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block
 
     meas_exp_plus = zeros(Complex(Float64), row, col, sample_no)
     meas_exp_min = zeros(Complex(Float64), row, col, sample_no)
+    meas_exp_pm = zeros(Complex(Float64), row, col, sample_no)
+    meas_exp_mp = zeros(Complex(Float64), row, col, sample_no)
+    
     meas_exp = [meas_exp_plus, meas_exp_min, meas_exp_pm, meas_exp_mp]
 
     for k = 1:sample_no
         for i = 1:row
             for j = 1:col
-                samples[i, j, k], meas_exp[1][i, j, k], meas_exp[2][i, j, k] = rejection_sampling(block_no, samples, samples_1, err_prep_1, err_prep_2, err_exp_1, err_exp_2, code, measure_type, [i, j, k], xbasis, meas_ops, meas_exp, block_size)
+                samples[i, j, k], meas_exp[1][i, j, k], meas_exp[2][i, j, k], meas_exp[3][i, j, k], meas_exp[4][i, j, k] = rejection_sampling(block_no, samples, samples_1, err_prep_1, err_prep_2, err_exp_1, err_exp_2, code, measure_type, [i, j, k], xbasis, meas_ops, meas_exp, block_size)
             end
         end
     end
 
-    return samples, meas_exp[1], meas_exp[2]
+    return samples, meas_exp[1], meas_exp[2], meas_exp[3], meas_exp[4]
 end
 
 function rejection_sampling(block_no, samples, samples_1, err_prep_1, err_prep_2, err_exp_1, err_exp_2, code, measure_type, loc, xbasis, meas_ops, meas_exp, block_size)
@@ -80,7 +86,7 @@ function rejection_sampling(block_no, samples, samples_1, err_prep_1, err_prep_2
 
             # check if condition is true
             if u < f_x
-                return samples[loc[1], loc[2], loc[3]]
+                counter = true
             end
         end
 
@@ -91,14 +97,21 @@ function rejection_sampling(block_no, samples, samples_1, err_prep_1, err_prep_2
         while counter == false
             # sample a measurement
             samples[loc[1], loc[2], loc[3]] = sample_generator(code, measure_type, xbasis[2])
-            f_x = pdf_2(samples, samples_1, loc, xbasis, meas_ops norms, norms_1)
+            f_x = pdf_2()
 
             # sample a random number
             u = rand(Uniform(0, ceil_constant))
+
+            # condition
+            if u < f_x
+                counter = true
+            end
         end
     end
 
-    return samples[loc[1], loc[2], loc[3]], norms[loc[1], loc[2], loc[3]],
+    norms[loc[1], loc[2], loc[3]] = f_x
+
+    return samples[loc[1], loc[2], loc[3]], norms[loc[1], loc[2], loc[3]], meas_exp_plus[loc[1], loc[2], loc[3]], meas_exp_min[loc[1], loc[2], loc[3]]
 end
 
 function find_max_dist(block_no, samples, samples_1, meas_type, meas_ops, xbasis, code)
@@ -209,6 +222,7 @@ function pdf_1(meas_exp_1, err_exp_1, err_exp_2, loc, block_size)
 
     err_exp_1_plus = err_exp_1[1][:, :, loc[3]]
     err_exp_1_min = err_exp_1[2][:, :, loc[3]]
+
 
     # pdf begins
 

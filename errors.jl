@@ -88,78 +88,59 @@ end
 
 #################################################
 
-function error_prep(loss, dephase, nu_l, xbasis, sample_no)
-    plus = xbasis[1]
-    min = xbasis[2]
+function error_prep(loss, dephase, nu_l, xbasis, block_no)
 
-    zero = xbasis[5]
-    one = xbasis[6]
+    if block_no == 1
+        basis_1 = xbasis[1]
+        basis_2 = xbasis[2]
+    elseif block_no == 2
+        basis_1 = xbasis[5]
+        basis_2 = xbasis[6]
+    end
 
     a_b = xbasis[4]
     n_b = xbasis[3]
 
     E(x, phi, nu) = (((1 - exp(-nu))^(x/2))/(sqrtfactorial(big(x))))*exp((-nu_l/2 + phi)*dense(n_b))*a_b^(x)
 
-    row, col = size(loss[:, :, 1])
+    row, col, sample_no = size(loss)
 
-    err_prep_plus = fill(E(loss[1, 1, 1], dephase[1, 1, 1], nu_l)*plus, (row, col, sample_no))
-    err_prep_min = fill(E(loss[1, 1, 1], dephase[1, 1, 1], nu_l)*min, (row, col, sample_no))
-    err_prep_zero = fill(E(loss[1, 1, 1], dephase[1, 1, 1], nu_l)*plus, (row, col, sample_no))
-    err_prep_one = fill(E(loss[1, 1, 1], dephase[1, 1, 1], nu_l)*min, (row, col, sample_no))
+    err_prep_1 = fill(E(loss[1, 1, 1], dephase[1, 1, 1], nu_l)*basis_1, (row, col, sample_no))
+    err_prep_2 = fill(E(loss[1, 1, 1], dephase[1, 1, 1], nu_l)*basis_2, (row, col, sample_no))
 
     for k = 1:sample_no
         for i = 1:row
             for j = 1:col
-                err_prep_plus[i, j, k] = E(loss[i, j, k], dephase[i, j, k], nu_l)*plus
-                err_prep_min[i, j, k] = E(loss[i, j, k], dephase[i, j, k], nu_l)*min
-                err_prep_zero[i, j, k] = E(loss[i, j, k], dephase[i, j, k], nu_l)*zero
-                err_prep_one[i, j, k] = E(loss[i, j, k], dephase[i, j, k], nu_l)*one
+                err_prep_1[i, j, k] = E(loss[i, j, k], dephase[i, j, k], nu_l)*basis_1
+                err_prep_2[i, j, k] = E(loss[i, j, k], dephase[i, j, k], nu_l)*basis_2
             end
         end
     end
 
-    return err_prep_plus, err_prep_min, err_prep_zero, err_prep_one
+    return err_prep_1, err_prep_2
 end
 
 ####### Find exp values for easy pdf construction
 
-function error_exp_1(err_prep_plus, err_prep_min)
+function error_exp(err_prep_1, err_prep_2)
 
-    row, col, sample_no = size(err_prep_plus)
-    err_exp_plus = fill(dagger(err_prep_plus[1, 1, 1])*err_prep_plus[1, 1, 1], (row, col, sample_no))
-    err_exp_min = fill(dagger(err_prep_min[1, 1, 1])*err_prep_min[1, 1, 1], (row, col, sample_no))
+    row, col, sample_no = size(err_prep_1)
 
-    for k = 1:sample_no
-        for i = 1:row
-            for j = 1:col
-                err_exp_plus[i, j, k] = dagger(err_prep_plus[i, j, k])*err_prep_plus[i, j, k]
-                err_exp_min[i, j, k] = dagger(err_prep_min[i, j, k])*err_prep_min[i, j, k]
-            end
-        end
-    end
-
-    return err_exp_plus, err_exp_min
-end
-
-function error_exp_2(err_prep_zero, err_prep_one)
-
-    row, col, sample_no = size(err_prep_zero)
-
-    err_exp_zero = zeros(Complex(Float64), (row, col, sample_no))
-    err_exp_one = zeros(Complex(Float64), (row, col, sample_no))
-    err_exp_zo = zeros(Complex(Float64), (row, col, sample_no))
-    err_exp_oz = zeros(Complex(Float64), (row, col, sample_no))
+    err_exp_1 = zeros(Complex(Float64), (row, col, sample_no))
+    err_exp_2 = zeros(Complex(Float64), (row, col, sample_no))
+    err_exp_12 = zeros(Complex(Float64), (row, col, sample_no))
+    err_exp_21 = zeros(Complex(Float64), (row, col, sample_no))
 
     for k = 1:sample_no
         for i = 1:row
             for j = 1:col
-                err_exp_zero[i, j, k] = dagger(err_prep_zero[i, j, k])*err_prep_zero[i, j, k]
-                err_exp_one[i, j, k] = dagger(err_prep_one[i, j, k])*err_prep_one[i, j, k]
-                err_exp_zo[i, j, k] = dagger(err_prep_zero[i, j, k])*err_prep_one[i, j, k]
-                err_exp_oz[i, j, k] = dagger(err_prep_one[i, j, k])*err_prep_zero[i, j, k]
+                err_exp_1[i, j, k] = dagger(err_prep_1[i, j, k])*err_prep_1[i, j, k]
+                err_exp_2[i, j, k] = dagger(err_prep_2[i, j, k])*err_prep_2[i, j, k]
+                err_exp_12[i, j, k] = dagger(err_prep_1[i, j, k])*err_prep_2[i, j, k]
+                err_exp_21[i, j, k] = dagger(err_prep_2[i, j, k])*err_prep_1[i, j, k]
             end
         end
     end
 
-    return err_exp_zero, err_exp_one, err_exp_zo, err_exp_oz
+    return err_exp_1, err_exp_2, err_exp_12, err_exp_21
 end
