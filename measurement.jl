@@ -131,13 +131,15 @@ function find_max_dist(block_no, samples, samples_1, meas_type, meas_ops, xbasis
         rad_range = 0:0.1:(edge + overflow)
         phi_range = 0:0.1:2*pi
 
-        samples_range = zeros(length(rad_range), length(phi_range))
+        samples_range = zeros(Complex{Float64}, (length(rad_range), length(phi_range)))
 
         for i = 1:length(rad_range)
             for j = 1:length(phi_range)
                 samples_range[i, j] = rad_range[i, j]*(cos(phi_range[i, j]) + sin(phi_range[i, j])*1im)
             end
         end
+
+
 
     elseif meas_type == "opt_phase"
         samples_range = 0:0.1:2*pi
@@ -246,16 +248,15 @@ function pdf_1(meas_exp_1, err_exp_1, err_exp_2, norms loc, block_size)
     for a = 1:4
         if loc[1] == 1
             Before = 1
-            Current = (sum(meas_exp_1_plus[i, j] for j = 1:loc[2])*sum(err_exp_1_plus[i, j] for j = (loc[2] + 1):no_col) +
-                        (-1)^lom[a, 1]*sum(meas_exp_1_pm[i, j] for j = 1:loc[2])*sum(err_exp_1_pm[i, j] for j = (loc[2] + 1):no_col) +
-                        (-1)^lom[a, 2]*sum(meas_exp_1_mp[i, j] for j = 1:loc[2])*sum(err_exp_1_mp[i, j] for j = (loc[2] + 1):no_col) +
-                        (-1)^lom[a, 3]*sum(meas_exp_1_min[i, j] for j = 1:loc[2])*sum(err_exp_1_min[i, j] for j = (loc[2] + 1):no_col))
+            Current = (sum(meas_exp_1_plus[loc[1], j] for j = 1:loc[2])*sum(err_exp_1_plus[loc[1], j] for j = (loc[2] + 1):no_col) +
+                        (-1)^lom[a, 1]*sum(meas_exp_1_pm[loc[1], j] for j = 1:loc[2])*sum(err_exp_1_pm[loc[1], j] for j = (loc[2] + 1):no_col) +
+                        (-1)^lom[a, 2]*sum(meas_exp_1_mp[loc[1], j] for j = 1:loc[2])*sum(err_exp_1_mp[loc[1], j] for j = (loc[2] + 1):no_col) +
+                        (-1)^lom[a, 3]*sum(meas_exp_1_min[loc[1], j] for j = 1:loc[2])*sum(err_exp_1_min[loc[1], j] for j = (loc[2] + 1):no_col))
 
             After = sum(sum(err_exp_1_plus[loc[1], j] for j = 1:no_col) +
                     (-1)^lom[a, 1]*sum(err_exp_1_pm[loc[1], j] for j = 1:no_col) +
                     (-1)^lom[a, 2]*sum(err_exp_1_mp[loc[1], j] for j = 1:no_col) +
                     (-1)^lom[a, 3]*sum(err_exp_1_min[loc[1], j] for j = 1:no_col) for i = (loc[1]+1):no_row)
-
 
         elseif loc[1] == no_row
             Before = sum(sum(meas_exp_1_plus[i, j] for j = 1:no_col) +
