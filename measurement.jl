@@ -5,7 +5,7 @@ function measuremet_operator(meas_type, xbasis, N_ord)
 
     if meas_type == "heterodyne"
         meas = function(x)
-            coherentstate(xbasis[9], x)/sqrt(pi)
+            coherentstate(xbasis[9], x)/pi
         end
 
     elseif meas_type == "opt_phase"
@@ -31,7 +31,7 @@ function meas_exp(meas_op, sample, err_prep_plus, err_prep_min)
 end
 
 ###########################
-function measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, xbasis, N_ord, samples_1, code, block_size)
+function measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, meas_exp_1, xbasis, N_ord, samples_1, code, block_size)
 
     #### Rejection sampling
     meas_op_1 = measurement_operator(measure_type[1], xbasis[1], N_ord[1])
@@ -45,20 +45,20 @@ function measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block
         row, col, sample_no = size(err_prep_2)
     end
 
-    samples = zeros(Complex(Float64), row, col, sample_no)
-    norms = zeros(Complex(Float64), row, col, sample_no)
+    samples = zeros(Complex{Float64}, row, col, sample_no)
+    norms = zeros(Complex{Float64}, row, col, sample_no)
 
-    meas_exp_plus = zeros(Complex(Float64), row, col, sample_no)
-    meas_exp_min = zeros(Complex(Float64), row, col, sample_no)
-    meas_exp_pm = zeros(Complex(Float64), row, col, sample_no)
-    meas_exp_mp = zeros(Complex(Float64), row, col, sample_no)
-    
+    meas_exp_plus = zeros(Complex{Float64}, row, col, sample_no)
+    meas_exp_min = zeros(Complex{Float64}, row, col, sample_no)
+    meas_exp_pm = zeros(Complex{Float64}, row, col, sample_no)
+    meas_exp_mp = zeros(Complex{Float64}, row, col, sample_no)
+
     meas_exp = [meas_exp_plus, meas_exp_min, meas_exp_pm, meas_exp_mp]
 
     for k = 1:sample_no
         for i = 1:row
             for j = 1:col
-                samples[i, j, k], meas_exp[1][i, j, k], meas_exp[2][i, j, k], meas_exp[3][i, j, k], meas_exp[4][i, j, k] = rejection_sampling(block_no, samples, samples_1, err_prep_1, err_prep_2, err_exp_1, err_exp_2, code, measure_type, [i, j, k], xbasis, meas_ops, meas_exp, block_size)
+                samples[i, j, k], norms[i, j, k], meas_exp[1][i, j, k], meas_exp[2][i, j, k], meas_exp[3][i, j, k], meas_exp[4][i, j, k] = rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, xbasis, N_ord, samples_1, code, block_size, meas_ops, meas_exp, [i, j, k], meas_exp_1)
             end
         end
     end
@@ -66,7 +66,8 @@ function measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block
     return samples, meas_exp[1], meas_exp[2], meas_exp[3], meas_exp[4]
 end
 
-function rejection_sampling(block_no, samples, samples_1, err_prep_1, err_prep_2, err_exp_1, err_exp_2, code, measure_type, loc, xbasis, meas_ops, meas_exp, block_size)
+# block_no, samples, samples_1, err_prep_1, err_prep_2, err_exp_1, err_exp_2, code, measure_type, loc, xbasis, meas_ops, meas_exp, block_size
+function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, xbasis, N_ord, samples_1, code, block_size, meas_ops, meas_exp, loc, meas_exp_1)
 
     if block_no == 1
 
@@ -97,6 +98,7 @@ function rejection_sampling(block_no, samples, samples_1, err_prep_1, err_prep_2
         while counter == false
             # sample a measurement
             samples[loc[1], loc[2], loc[3]] = sample_generator(code, measure_type, xbasis[2])
+
             f_x = pdf_2()
 
             # sample a random number
@@ -208,26 +210,86 @@ end
 
 #######################
 # Probability functions
-function pdf_1(meas_exp_1, err_exp_1, err_exp_2, loc, block_size)
+function pdf_1(meas_exp_1, err_exp_1, err_exp_2, norms loc, block_size)
 
     # setup all of the matrices
     no_row = block_size[1]
     no_col = block_size[2]
     rep = block_size[3]
 
+    err_exp_1_plus = err_exp_1[1][:, :, loc[3]]
+    err_exp_1_min = err_exp_1[2][:, :, loc[3]]
+    err_exp_1_pm = err_exp_1[3][:, :, loc[3]]
+    err_exp_1_mp = err_exp_1[4][:, :, loc[3]]
+
     err_exp_2_zero = err_exp_2[1][:, :, loc[3]]
     err_exp_2_one = err_exp_2[2][:, :, loc[3]]
     err_exp_2_zo = err_exp_2[3][:, :, loc[3]]
     err_exp_2_oz = err_exp_2[4][:, :, loc[3]]
 
-    err_exp_1_plus = err_exp_1[1][:, :, loc[3]]
-    err_exp_1_min = err_exp_1[2][:, :, loc[3]]
+    meas_exp_1_plus = meas_exp_1[1][:, :, loc[3]]
+    meas_exp_1_min = meas_exp_1[2][:, :, loc[3]]
+    meas_exp_1_pm = meas_exp_1[3][:, :, loc[3]]
+    meas_exp_1_mp = meas_exp_1[4][:, :, loc[3]]
+
+    ### pdf begins ###
+    # the constant factor
+    B_plus = sum(sum(err_exp_2_zero[i, j] for j = 1:no_col) + sum(err_exp_2_one[i, j] for j = 1:no_col) + sum(err_exp_2_zo[i, j] for j = 1:no_col) + sum(err_exp_2_oz[i, j] for j = 1:no_col) for i = 1:no_row)/(2^no_row)
+    B_min = sum(sum(err_exp_2_zero[i, j] for j = 1:no_col) + sum(err_exp_2_one[i, j] for j = 1:no_col) - sum(err_exp_2_zo[i, j] for j = 1:no_col) - sum(err_exp_2_oz[i, j] for j = 1:no_col) for i = 1:no_row)/(2^no_row)
+    B = B_plus + B_min
+
+    # the variable factor
+    # A_1
+    lom = [0 0 0; 1 0 1; 0 1 1; 1 1 0] # location of minuses
+    A = zeros(Complex{Float64}, 4)
+
+    for a = 1:4
+        if loc[1] == 1
+            Before = 1
+            Current = (sum(meas_exp_1_plus[i, j] for j = 1:loc[2])*sum(err_exp_1_plus[i, j] for j = (loc[2] + 1):no_col) +
+                        (-1)^lom[a, 1]*sum(meas_exp_1_pm[i, j] for j = 1:loc[2])*sum(err_exp_1_pm[i, j] for j = (loc[2] + 1):no_col) +
+                        (-1)^lom[a, 2]*sum(meas_exp_1_mp[i, j] for j = 1:loc[2])*sum(err_exp_1_mp[i, j] for j = (loc[2] + 1):no_col) +
+                        (-1)^lom[a, 3]*sum(meas_exp_1_min[i, j] for j = 1:loc[2])*sum(err_exp_1_min[i, j] for j = (loc[2] + 1):no_col))
+
+            After = sum(sum(err_exp_1_plus[loc[1], j] for j = 1:no_col) +
+                    (-1)^lom[a, 1]*sum(err_exp_1_pm[loc[1], j] for j = 1:no_col) +
+                    (-1)^lom[a, 2]*sum(err_exp_1_mp[loc[1], j] for j = 1:no_col) +
+                    (-1)^lom[a, 3]*sum(err_exp_1_min[loc[1], j] for j = 1:no_col) for i = (loc[1]+1):no_row)
 
 
-    # pdf begins
+        elseif loc[1] == no_row
+            Before = sum(sum(meas_exp_1_plus[i, j] for j = 1:no_col) +
+                        (-1)^lom[a, 1]*sum(meas_exp_1_pm[i, j] for j = 1:no_col) +
+                        (-1)^lom[a, 2]*sum(meas_exp_1_mp[i, j] for j = 1:no_col) +
+                        (-1)^lom[a, 3]*sum(meas_exp_1_min[i, j] for j = 1:no_col) for i = 1:(loc[3]-1))
 
-    B = sum(sum( for j = 1:no_col) for i = 1:no_row)
+            Current = (sum(meas_exp_1_plus[loc[1], j] for j = 1:loc[2])*sum(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col) +
+                        (-1)^lom[a, 1]*sum(meas_exp_1_pm[loc[1], j] for j = 1:loc[2])*sum(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col) +
+                        (-1)^lom[a, 2]*sum(meas_exp_1_mp[loc[1], j] for j = 1:loc[2])*sum(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col) +
+                        (-1)^lom[a, 3]*sum(meas_exp_1_min[loc[1], j] for j = 1:loc[2])*sum(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col))
+            After = 1
+        else
+            Before = sum(sum(meas_exp_1_plus[i, j] for j = 1:no_col) +
+                        (-1)^lom[a, 1]*sum(meas_exp_1_pm[i, j] for j = 1:no_col) +
+                        (-1)^lom[a, 2]*sum(meas_exp_1_mp[i, j] for j = 1:no_col) +
+                        (-1)^lom[a, 3]*sum(meas_exp_1_min[i, j] for j = 1:no_col) for i = 1:(loc[1]-1))
 
+            Current = (sum(meas_exp_1_plus[loc[1], j] for j = 1:loc[2])*sum(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col) +
+                        (-1)^lom[a, 1]*sum(meas_exp_1_pm[loc[1], j] for j = 1:loc[2])*sum(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col) +
+                        (-1)^lom[a, 2]*sum(meas_exp_1_mp[loc[1], j] for j = 1:loc[2])*sum(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col) +
+                        (-1)^lom[a, 3]*sum(meas_exp_1_min[loc[1], j] for j = 1:loc[2])*sum(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col))
+
+            After = sum(sum(err_exp_1_plus[i, j] for j = 1:no_col) +
+                    (-1)^lom[a, 1]*sum(err_exp_1_pm[i, j] for j = 1:no_col) +
+                    (-1)^lom[a, 2]*sum(err_exp_1_mp[i, j] for j = 1:no_col) +
+                    (-1)^lom[a, 3]*sum(err_exp_1_min[i, j] for j = 1:no_col) for i = (loc[1]+1):no_row)
+        end
+
+        A[a] = Before*Current*After
+    end
+
+    ans = B*sum(A[i] for i = 1:4)/(2^(no_row+1) * 4)
+    return ans
 end
 
 function pdf_2()

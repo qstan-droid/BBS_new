@@ -1,3 +1,4 @@
+using QuantumOptics
 using Distributions
 
 function loss_sample(err_place, nu_loss, m, n, xbasis, sample_no)

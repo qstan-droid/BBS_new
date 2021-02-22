@@ -42,9 +42,9 @@ function circuit(code, N_ord, dim, alpha, block_size, err_place, err_info, measu
     # generate measurement samples
     samples_1 = fill(0.0, (block_size[1], block_size[2], sample_no)) # this is just to fill in
 
-    samples_1, meas_exp_plus_1, meas_exp_min_1, meas_exp_pm_1, meas_exp_mp_1 = measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, 1, measure, [xbasis_1, xbasis_2], N_ord, samples_1, code, block_size)
-    meas_exp_1 = [meas_exp_plus_1, meas_exp_min_1]
-    samples_2, meas_exp_plus_2, meas_exp_min_2, meas_exp_pm_2, meas_exp_mp_2 = measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, 2, measure, [xbasis_1, xbasis_2], N_ord, samples_1, code, block_size)
-    meas_exp_2 = [meas_exp_plus_2, meas_exp_min_2]
+    samples_1, meas_exp_plus_1, meas_exp_min_1, meas_exp_pm_1, meas_exp_mp_1 = measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, 1, measure, meas_exp_1, [xbasis_1, xbasis_2], N_ord, samples_1, code, block_size)
+    meas_exp_1 = [meas_exp_plus_1, meas_exp_min_1, meas_exp_pm_1, meas_exp_mp_1]
+    samples_2, meas_exp_zero_2, meas_exp_one_2, meas_exp_zo_2, meas_exp_oz_2 = measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, 2, measure, meas_exp_1, [xbasis_1, xbasis_2], N_ord, samples_1, code, block_size)
+    meas_exp_2 = [meas_exp_zero_2, meas_exp_one_2, meas_exp_zo_2, meas_exp_oz_2]
 
 end
