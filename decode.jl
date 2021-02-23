@@ -1,38 +1,71 @@
 using QuantumOptics
 using Distributions
 
-function majority(out, sample_no)
-    maj_out = zeros(Bool, 1, sample_no)
-    row, col = size(out)
+function decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, sample_no, decode_type, measure)
+    # initialise empty arrays
+    outcomes_1 = zeros(Bool, sample_no)
+    outcomes_2 = zeros(Bool, sample_no)
 
-    for i = collect(1:col)
-        plus = 0
-        minus = 0
+    # how to decode?
+    if decode_type == "naive"
+        # decode each qubit individually
+        samples_out_1 = naive_decode(samples_1, N_ord[1], block_size, measure[1])
+        samples_out_2 = naive_decode(samples_2, N_ord[2], block_size, measure[2])
 
-        for j = collect(1:row)
+        # decide outcome through these
+        outcomes_1 = block_decode(samples_out_1, 1)
+        outcomes_2 = block_decode(samples_out_2, 2)
 
-            if out[j, i] == true
-                plus += 1
-            else
-                minus += 1
+    elseif decode_type == "bias"
+
+    elseif decode_type == "max_likelihood"
+
+    end
+
+    return outcomes_1, outcomes_2
+end
+
+#########################################################
+# different functions, different decoding types
+
+function naive_decode(samples, N_ord, block_size, measure)
+    # decide the outcome for each qubit individually
+    row, col, sample_no = size(samples)
+    samples_out = zeros(Int64, (row, col, sample_no))
+
+    for k = 1:sample_no
+        for i = 1:row
+            for j = 1:col
+                samples_out[i, j, k] = meas_outcome(samples[i, j, k], N_ord, measure, 0)
             end
-        end
-
-        if plus > minus
-            maj_out[i] = true
-        else
-            maj_out[i] = false
         end
     end
 
-    return maj_out
+
+
+    return samples_out
 end
 
-function meas_outcome(meas, N_ord)
+#########################################################
+# functions which are tools for decoding
 
-    phi = mod2pi(mod2pi(angle(meas)) + pi/(N_ord*2))
-    if phi == 2*pi
-        phi = 0
+function meas_outcome(meas, N_ord, meas_type, bias)
+    if meas_type == "heterodyne"
+        phi = mod2pi(mod2pi(angle(meas)) + pi/(N_ord*2)) + bias
+        if phi == 2*pi
+            phi = 0
+        end
+        if phi > 2*pi
+            phi = phi - 2*pi
+        end
+    elseif meas_type == "opt_phase"
+        phi = mod2pi(mod2pi(convert(Float64, meas)) + pi/(N_ord*2)) + bias
+        if phi == 2*pi
+            phi = 0
+        end
+        if phi > 2*pi
+            phi = phi - 2*pi
+        end
     end
 
     k = 0
@@ -41,10 +74,10 @@ function meas_outcome(meas, N_ord)
     while k < N_ord
 
         if phi > 0 + 2*k*pi/N_ord && phi < pi/N_ord + 2*k*pi/N_ord
-            return true
+            return +1
             edge = true
         elseif phi > pi/N_ord + 2*pi*k/N_ord && phi < (2*pi/N_ord) + 2*k*pi/N_ord
-            return false
+            return -1
             edge = true
         end
         k += 1
@@ -53,96 +86,57 @@ function meas_outcome(meas, N_ord)
     if edge == false
         coin = rand(1:2)
         if coin == 1
-            return true
+            return +1
         else
-            return false
+            return -1
         end
     end
 end
 
-####### Optimized decoder ########
-# This decoder will weight each decision on how likely it was for the beta to be wrong
-# The more likely it is, the less weight the beta has
+function block_decode(samples_out, block_no, block_size)
+    # unpack variables
+    rep = block_size[3]
+    row, col, sample_no = size(samples_out)
 
-function likelihood_decoder(samples, outcome, sample_no, block_size, xbasis)
+    if block_no == 1
+        # we compute total parity of each column
+        # take majority vote over all parities
+        for k = 1:sample_no
+            col_par = fill(1, col)
 
-    final_out = zeros(block_size, sample_no)
-    plus_cat = xbasis[1]
-    min_cat = xbasis[2]
-    b = xbasis[7]
+            for i = 1:col
+                col_par[i] = prod(samples_out[j, i, k] for j = 1:no_row)
+            end
 
-    for j = collect(1:sample_no)    # cycle through
-        pos_log_prob = 0.0
-        neg_log_prob = 0.0
-
-        for i = collect(1:block_size)
-
-            if outcome[i, j] == true
-
-                # if the outcome is positive, we check the likelihood that it was a negative
-                pos_prob = (dagger(coherentstate(b, samples[i, j]))*min_cat)*(dagger(min_cat)*coherentstate(b, samples[i, j]))
-                pos_log_prob = pos_log_prob - log(norm(pos_prob))
+            # take majority vote over all column parities
+            no_pos = count(l->(l == 1), col_par)
+            no_neg = count(l->(l == -1), col_par)
+            if no_pos > no_neg
+                maj[k] = true
             else
-                # if outcome is negative, we check the likelihood that it was positive
-                neg_prob = (dagger(coherentstate(b, samples[i, j]))*plus_cat)*(dagger(plus_cat)*coherentstate(b, samples[i, j]))
-                neg_log_prob = neg_log_prob - log(norm(neg_prob))
+                maj[k] = false
             end
         end
 
-        # Decide on the outcome
-        if pos_log_prob > neg_log_prob
-            final_out[j] = true
-        elseif pos_log_prob < neg_log_prob
-            final_out[j] = false
-        else
-            coin = rand(1:2)
-            if coin == 1
-                final_out[j] = true
-            else
-                final_out[j] = false
+
+    elseif block_no == 2
+        # take parities of each row
+        for k = 1:sample_no
+            row_par = fill(1, (rep, div(col, rep)))
+
+            # take row parities
+            for i = 1:row
+                for j = 1:rep
+                    row_par[j, i] = prod(samples_out[i, l] for l = (j-1)*div(col, rep)+1:j*div(col, rep))
+                end
             end
+            # majority vote over repetitions
+
+
+            # majority vote over all column parities
+
         end
     end
 
-    return final_out
-end
-
-#### Syndrome based decoder ####
-
-# take all samples from second rail (or first) and find the average angle that they were rotated by, then rotating back by that angle
-
-function optimise_dephase(samples, N_ord)
-
-    average_angle = atan(sum(sin(mod2pi(angle(samples[i]))) for i = 1:length(samples))/length(samples), sum(cos(mod2pi(angle(samples[i]))) for i = 1:length(samples))/length(samples))
-
-    # Find the nearest angle
-    gap = pi/N_ord
-    diff_list = zeros(2*N_ord+1)
-
-    for k = collect(1:2*N_ord+1)
-        diff_list[k] = mod2pi(gap*(k-1)) - mod2pi(average_angle)
-    end
-
-    abs_diff_list = zeros(length(diff_list))
-    for i = collect(1:length(diff_list))
-        abs_diff_list[i] = abs(diff_list[i])
-    end
-
-    k_min = argmin(abs_diff_list)
-
-    # rotate each sample back
-    for i = collect(1:length(samples))
-
-        if diff_list[k_min] < 0
-            samples[i] = samples[i]*exp(-abs_diff_list[k_min]*1im)
-        elseif diff_list[k_min] > 0
-            samples[i] = samples[i]*exp(abs_diff_list[k_min]*1im)
-        elseif diff_list[k_min] == 0
-            samples[i] = samples[i]
-        end
-
-        #samples[i] = samples[i]*exp(abs_diff_list[k_min]*1im)
-    end
-
-    return samples, average_angle
+    return maj
 end

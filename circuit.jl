@@ -2,7 +2,7 @@ include("code_prep.jl")
 include("errors.jl")
 
 # N_ord, dim and alpha are lists
-function circuit(code, N_ord, dim, alpha, block_size, err_place, err_info, measure, sample_no)
+function circuit(code, N_ord, dim, alpha, block_size, err_place, err_info, measure, decode_type, sample_no)
 
     # begin code preparation
     xbasis_1 = code_prep(N_ord[1], dim[1], alpha[1], code[1])
@@ -40,11 +40,19 @@ function circuit(code, N_ord, dim, alpha, block_size, err_place, err_info, measu
 
     ###################################################################################################
     # generate measurement samples
-    samples_1 = fill(0.0, (block_size[1], block_size[2], sample_no)) # this is just to fill in
+    samples_1 = 0
+    norms_1 = 0     # this is just to fill in
+    meas_exp_1 = 0
 
-    samples_1, meas_exp_plus_1, meas_exp_min_1, meas_exp_pm_1, meas_exp_mp_1 = measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, 1, measure, meas_exp_1, [xbasis_1, xbasis_2], N_ord, samples_1, code, block_size)
+    samples_1, norms_1, meas_exp_plus_1, meas_exp_min_1, meas_exp_pm_1, meas_exp_mp_1 = measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, 1, measure, meas_exp_1, [xbasis_1, xbasis_2], N_ord, samples_1, norms_1, code, block_size)
     meas_exp_1 = [meas_exp_plus_1, meas_exp_min_1, meas_exp_pm_1, meas_exp_mp_1]
-    samples_2, meas_exp_zero_2, meas_exp_one_2, meas_exp_zo_2, meas_exp_oz_2 = measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, 2, measure, meas_exp_1, [xbasis_1, xbasis_2], N_ord, samples_1, code, block_size)
+    samples_2, norms_2, meas_exp_zero_2, meas_exp_one_2, meas_exp_zo_2, meas_exp_oz_2 = measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, 2, measure, meas_exp_1, [xbasis_1, xbasis_2], N_ord, samples_1, norms_1, code, block_size)
     meas_exp_2 = [meas_exp_zero_2, meas_exp_one_2, meas_exp_zo_2, meas_exp_oz_2]
+
+    ###################################################################################################
+    # Thus comes decoding
+    # outcomes are the decoded outcomes for each block, should be an array of length(sample_no) for each
+    outcomes_1, outcomes_2 = decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, sample_no, decode_type)
+
 
 end

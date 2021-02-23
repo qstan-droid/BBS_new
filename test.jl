@@ -7,6 +7,11 @@ b = fill(1.0, (2, 9))
 c = fill(0.0, (2, 3))
 d = fill(0.0, (2, 9))
 
+for i = 1:4
+    println("yes")
+
+end
+
 a1, c1, b1, d1 = error_propagation(a, c, b, d, [2, 3, 3], [1, 1])
 println("block_1_loss: ", a1)
 println("block_1_dephase: ", c1)

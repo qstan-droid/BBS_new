@@ -46,7 +46,7 @@ function measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block
     end
 
     samples = zeros(Complex{Float64}, row, col, sample_no)
-    norms = zeros(Complex{Float64}, row, col, sample_no)
+    norms = fill(1.0+0.0*1im, row, col, sample_no)
 
     meas_exp_plus = zeros(Complex{Float64}, row, col, sample_no)
     meas_exp_min = zeros(Complex{Float64}, row, col, sample_no)
@@ -58,29 +58,29 @@ function measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block
     for k = 1:sample_no
         for i = 1:row
             for j = 1:col
-                samples[i, j, k], norms[i, j, k], meas_exp[1][i, j, k], meas_exp[2][i, j, k], meas_exp[3][i, j, k], meas_exp[4][i, j, k] = rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, xbasis, N_ord, samples_1, code, block_size, meas_ops, meas_exp, [i, j, k], meas_exp_1)
+                samples[i, j, k], norms[i, j, k], meas_exp[1][i, j, k], meas_exp[2][i, j, k], meas_exp[3][i, j, k], meas_exp[4][i, j, k] = rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, xbasis, N_ord, samples_1, code, block_size, meas_ops, meas_exp, [i, j, k], meas_exp_1, norms_1)
             end
         end
     end
 
-    return samples, meas_exp[1], meas_exp[2], meas_exp[3], meas_exp[4]
+    return samples, norms, meas_exp[1], meas_exp[2], meas_exp[3], meas_exp[4]
 end
 
 # block_no, samples, samples_1, err_prep_1, err_prep_2, err_exp_1, err_exp_2, code, measure_type, loc, xbasis, meas_ops, meas_exp, block_size
-function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, xbasis, N_ord, samples_1, code, block_size, meas_ops, meas_exp, loc, meas_exp_1)
+function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, xbasis, N_ord, samples_1, code, block_size, meas_ops, meas_exp, loc, meas_exp_1, norms_1)
+
+    # find the envelope constant function
+    ceil_constant = find_max_dist(block_size, block_no, measure_type, meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, code, loc)*1.1
+    counter = false
 
     if block_no == 1
-
-        # find the envelope constant function
-        ceil_constant = find_max_dist(block_no, samples , samples_1, measure_type, meas_ops, xbasis, code)*1.1
-        counter = false
 
         while counter == false
             # sample a measurement
             samples[loc[1], loc[2], loc[3]] = sample_generator(code, measure_type, xbasis[1])
-            meas_exp_plus[1][loc[1], loc[2], loc[3]], meas_exp_min[2][loc[1], loc[2], loc[3]], meas_exp_pm[2][loc[1], loc[2], loc[3]], meas_exp_mp[2][loc[1], loc[2], loc[3]] = meas_exp(samples[loc[1], loc[2], loc[3]], err_prep_1[1], err_prep_1[2])
+            meas_exp[1][loc[1], loc[2], loc[3]], meas_exp[2][loc[1], loc[2], loc[3]], meas_exp[2][loc[1], loc[2], loc[3]], meas_exp[2][loc[1], loc[2], loc[3]] = meas_exp(samples[loc[1], loc[2], loc[3]], err_prep_1[1], err_prep_1[2])
 
-            f_x = pdf_1(meas_exp[1][:, :, loc[3]], err_exp_1, err_exp_2, loc, block_size)
+            f_x = pdf_1(meas_exp, err_exp_1, err_exp_2, norms, loc, block_size)
 
             # sample a random number between 1 and max
             u = rand(Uniform(0, ceil_constant))
@@ -92,14 +92,12 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
         end
 
     elseif block_no == 2
-        ceil_constant = find_max_dist(block_no)*1.1
-        counter = false
 
         while counter == false
             # sample a measurement
             samples[loc[1], loc[2], loc[3]] = sample_generator(code, measure_type, xbasis[2])
 
-            f_x = pdf_2()
+            f_x = pdf_2(meas_exp_1, meas_exp, err_exp_2, norms, norms_1, loc, block_size)
 
             # sample a random number
             u = rand(Uniform(0, ceil_constant))
@@ -113,10 +111,10 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
 
     norms[loc[1], loc[2], loc[3]] = f_x
 
-    return samples[loc[1], loc[2], loc[3]], norms[loc[1], loc[2], loc[3]], meas_exp_plus[loc[1], loc[2], loc[3]], meas_exp_min[loc[1], loc[2], loc[3]]
+    return samples[loc[1], loc[2], loc[3]], norms[loc[1], loc[2], loc[3]], meas_exp[1][loc[1], loc[2], loc[3]], meas_exp[2][loc[1], loc[2], loc[3]], meas_exp[3][loc[1], loc[2], loc[3]], meas_exp[4][loc[1], loc[2], loc[3]]
 end
 
-function find_max_dist(block_no, samples, samples_1, meas_type, meas_ops, xbasis, code)
+function find_max_dist(block_size, block_no, meas_type, meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, xbasis, code, loc)
 
     #######
     if meas_type == "heterodyne"
@@ -139,8 +137,6 @@ function find_max_dist(block_no, samples, samples_1, meas_type, meas_ops, xbasis
             end
         end
 
-
-
     elseif meas_type == "opt_phase"
         samples_range = 0:0.1:2*pi
     end
@@ -153,7 +149,8 @@ function find_max_dist(block_no, samples, samples_1, meas_type, meas_ops, xbasis
 
             for i = 1:row_range
                 for j = 1:col_range
-                    heights[i, j] = pdf_1()
+                    meas_exp_1[1][loc[1], loc[2], loc[3]], meas_exp_1[2][loc[1], loc[2], loc[3]], meas_exp_1[3][loc[1], loc[2], loc[3]], meas_exp_1[4][loc[1], loc[2], loc[3]] = meas_exp(meas_ops[1], samples_range[i, j], err_prep_1[1], err_prep_1[2])
+                    heights[i, j] = pdf_1(meas_exp_1, err_exp_1, err_exp_2, norms, loc, block_size)
                 end
             end
 
@@ -161,7 +158,8 @@ function find_max_dist(block_no, samples, samples_1, meas_type, meas_ops, xbasis
             heights = zeros(length(samples_range))
 
             for i = 1:length(samples_range)
-                heights[i] = pdf_1()
+                meas_exp_1[1][loc[1], loc[2], loc[3]], meas_exp_1[2][loc[1], loc[2], loc[3]], meas_exp_1[3][loc[1], loc[2], loc[3]], meas_exp_1[4][loc[1], loc[2], loc[3]] = meas_exp(meas_ops[1], samples_range[i, j], err_prep_1[1], err_prep_1[2])
+                heights[i] = pdf_1(meas_exp_1, err_exp_1, err_exp_2, norms, loc, block_size)
             end
         end
     elseif block_no == 2
@@ -212,7 +210,7 @@ end
 
 #######################
 # Probability functions
-function pdf_1(meas_exp_1, err_exp_1, err_exp_2, norms loc, block_size)
+function pdf_1(meas_exp_1, err_exp_1, err_exp_2, norms, loc, block_size)
 
     # setup all of the matrices
     no_row = block_size[1]
@@ -234,65 +232,258 @@ function pdf_1(meas_exp_1, err_exp_1, err_exp_2, norms loc, block_size)
     meas_exp_1_pm = meas_exp_1[3][:, :, loc[3]]
     meas_exp_1_mp = meas_exp_1[4][:, :, loc[3]]
 
+    norms = norms[:, :, loc[3]]
+
     ### pdf begins ###
     # the constant factor
-    B_plus = sum(sum(err_exp_2_zero[i, j] for j = 1:no_col) + sum(err_exp_2_one[i, j] for j = 1:no_col) + sum(err_exp_2_zo[i, j] for j = 1:no_col) + sum(err_exp_2_oz[i, j] for j = 1:no_col) for i = 1:no_row)/(2^no_row)
-    B_min = sum(sum(err_exp_2_zero[i, j] for j = 1:no_col) + sum(err_exp_2_one[i, j] for j = 1:no_col) - sum(err_exp_2_zo[i, j] for j = 1:no_col) - sum(err_exp_2_oz[i, j] for j = 1:no_col) for i = 1:no_row)/(2^no_row)
+    B_plus = prod(prod(err_exp_2_zero[i, j] for j = 1:no_col) + prod(err_exp_2_one[i, j] for j = 1:no_col) + prod(err_exp_2_zo[i, j] for j = 1:no_col) + prod(err_exp_2_oz[i, j] for j = 1:no_col) for i = 1:no_row*rep)/(2^(no_row*rep))
+    B_min = prod(prod(err_exp_2_zero[i, j] for j = 1:no_col) + prod(err_exp_2_one[i, j] for j = 1:no_col) - prod(err_exp_2_zo[i, j] for j = 1:no_col) - prod(err_exp_2_oz[i, j] for j = 1:no_col) for i = 1:no_row*rep)/(2^(no_row*rep))
     B = B_plus + B_min
 
     # the variable factor
-    # A_1
     lom = [0 0 0; 1 0 1; 0 1 1; 1 1 0] # location of minuses
     A = zeros(Complex{Float64}, 4)
 
     for a = 1:4
-        if loc[1] == 1
+        if no_row == 1
             Before = 1
-            Current = (sum(meas_exp_1_plus[loc[1], j] for j = 1:loc[2])*sum(err_exp_1_plus[loc[1], j] for j = (loc[2] + 1):no_col) +
-                        (-1)^lom[a, 1]*sum(meas_exp_1_pm[loc[1], j] for j = 1:loc[2])*sum(err_exp_1_pm[loc[1], j] for j = (loc[2] + 1):no_col) +
-                        (-1)^lom[a, 2]*sum(meas_exp_1_mp[loc[1], j] for j = 1:loc[2])*sum(err_exp_1_mp[loc[1], j] for j = (loc[2] + 1):no_col) +
-                        (-1)^lom[a, 3]*sum(meas_exp_1_min[loc[1], j] for j = 1:loc[2])*sum(err_exp_1_min[loc[1], j] for j = (loc[2] + 1):no_col))
-
-            After = sum(sum(err_exp_1_plus[loc[1], j] for j = 1:no_col) +
-                    (-1)^lom[a, 1]*sum(err_exp_1_pm[loc[1], j] for j = 1:no_col) +
-                    (-1)^lom[a, 2]*sum(err_exp_1_mp[loc[1], j] for j = 1:no_col) +
-                    (-1)^lom[a, 3]*sum(err_exp_1_min[loc[1], j] for j = 1:no_col) for i = (loc[1]+1):no_row)
-
+            After = 1
+            if block_size[2] == 1
+                Current = meas_exp_1_plus[loc[1], loc[2]] +
+                            (-1)^lom[a, 1]*meas_exp_1_pm[loc[1], loc[2]] +
+                            (-1)^lom[a, 2]*meas_exp_1_mp[loc[1], loc[2]] +
+                            (-1)^lom[a, 3]*meas_exp_1_min[loc[1], loc[2]]
+            else
+                if loc[2] == no_col
+                    Current = (prod(meas_exp_1_plus[loc[1], j] for j = 1:no_col) +
+                                (-1)^lom[a, 1]*prod(meas_exp_1_pm[loc[1], j] for j = 1:no_col) +
+                                (-1)^lom[a, 2]*prod(meas_exp_1_mp[loc[1], j] for j = 1:no_col) +
+                                (-1)^lom[a, 3]*prod(meas_exp_1_min[loc[1], j] for j = 1:no_col))
+                else
+                    Current = (prod(meas_exp_1_plus[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_plus[loc[1], j] for j = (loc[2] + 1):no_col) +
+                                (-1)^lom[a, 1]*prod(meas_exp_1_pm[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_pm[loc[1], j] for j = (loc[2] + 1):no_col) +
+                                (-1)^lom[a, 2]*prod(meas_exp_1_mp[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_mp[loc[1], j] for j = (loc[2] + 1):no_col) +
+                                (-1)^lom[a, 3]*prod(meas_exp_1_min[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_min[loc[1], j] for j = (loc[2] + 1):no_col))
+                end
+            end
+        elseif loc[1] == 1
+            Before = 1
+            if loc[2] == no_col
+                Current = (prod(meas_exp_1_plus[loc[1], j] for j = 1:no_loc) +
+                            (-1)^lom[a, 1]*prod(meas_exp_1_pm[loc[1], j] for j = 1:no_loc) +
+                            (-1)^lom[a, 2]*prod(meas_exp_1_mp[loc[1], j] for j = 1:no_loc)+
+                            (-1)^lom[a, 3]*prod(meas_exp_1_min[loc[1], j] for j = 1:no_loc))
+            else
+                Current = (prod(meas_exp_1_plus[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_plus[loc[1], j] for j = (loc[2] + 1):no_col) +
+                            (-1)^lom[a, 1]*prod(meas_exp_1_pm[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_pm[loc[1], j] for j = (loc[2] + 1):no_col) +
+                            (-1)^lom[a, 2]*prod(meas_exp_1_mp[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_mp[loc[1], j] for j = (loc[2] + 1):no_col) +
+                            (-1)^lom[a, 3]*prod(meas_exp_1_min[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_min[loc[1], j] for j = (loc[2] + 1):no_col))
+            end
+            After = prod(prod(err_exp_1_plus[i, j] for j = 1:no_col) +
+                    (-1)^lom[a, 1]*prod(err_exp_1_pm[i, j] for j = 1:no_col) +
+                    (-1)^lom[a, 2]*prod(err_exp_1_mp[i, j] for j = 1:no_col) +
+                    (-1)^lom[a, 3]*prod(err_exp_1_min[i, j] for j = 1:no_col) for i = (loc[1]+1):no_row)
         elseif loc[1] == no_row
-            Before = sum(sum(meas_exp_1_plus[i, j] for j = 1:no_col) +
-                        (-1)^lom[a, 1]*sum(meas_exp_1_pm[i, j] for j = 1:no_col) +
-                        (-1)^lom[a, 2]*sum(meas_exp_1_mp[i, j] for j = 1:no_col) +
-                        (-1)^lom[a, 3]*sum(meas_exp_1_min[i, j] for j = 1:no_col) for i = 1:(loc[3]-1))
-
-            Current = (sum(meas_exp_1_plus[loc[1], j] for j = 1:loc[2])*sum(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col) +
-                        (-1)^lom[a, 1]*sum(meas_exp_1_pm[loc[1], j] for j = 1:loc[2])*sum(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col) +
-                        (-1)^lom[a, 2]*sum(meas_exp_1_mp[loc[1], j] for j = 1:loc[2])*sum(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col) +
-                        (-1)^lom[a, 3]*sum(meas_exp_1_min[loc[1], j] for j = 1:loc[2])*sum(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col))
+            Before = prod(prod(meas_exp_1_plus[i, j] for j = 1:no_col) +
+                        (-1)^lom[a, 1]*prod(meas_exp_1_pm[i, j] for j = 1:no_col) +
+                        (-1)^lom[a, 2]*prod(meas_exp_1_mp[i, j] for j = 1:no_col) +
+                        (-1)^lom[a, 3]*prod(meas_exp_1_min[i, j] for j = 1:no_col) for i = 1:(loc[1]-1))
+            if loc[2] == no_col
+                Current = (prod(meas_exp_1_plus[loc[1], j] for j = 1:no_loc) +
+                            (-1)^lom[a, 1]*prod(meas_exp_1_pm[loc[1], j] for j = 1:no_loc) +
+                            (-1)^lom[a, 2]*prod(meas_exp_1_mp[loc[1], j] for j = 1:no_loc) +
+                            (-1)^lom[a, 3]*prod(meas_exp_1_min[loc[1], j] for j = 1:no_loc))
+            else
+                Current = (prod(meas_exp_1_plus[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col) +
+                            (-1)^lom[a, 1]*prod(meas_exp_1_pm[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col) +
+                            (-1)^lom[a, 2]*prod(meas_exp_1_mp[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col) +
+                            (-1)^lom[a, 3]*prod(meas_exp_1_min[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col))
+            end
             After = 1
         else
-            Before = sum(sum(meas_exp_1_plus[i, j] for j = 1:no_col) +
-                        (-1)^lom[a, 1]*sum(meas_exp_1_pm[i, j] for j = 1:no_col) +
-                        (-1)^lom[a, 2]*sum(meas_exp_1_mp[i, j] for j = 1:no_col) +
-                        (-1)^lom[a, 3]*sum(meas_exp_1_min[i, j] for j = 1:no_col) for i = 1:(loc[1]-1))
-
-            Current = (sum(meas_exp_1_plus[loc[1], j] for j = 1:loc[2])*sum(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col) +
-                        (-1)^lom[a, 1]*sum(meas_exp_1_pm[loc[1], j] for j = 1:loc[2])*sum(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col) +
-                        (-1)^lom[a, 2]*sum(meas_exp_1_mp[loc[1], j] for j = 1:loc[2])*sum(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col) +
-                        (-1)^lom[a, 3]*sum(meas_exp_1_min[loc[1], j] for j = 1:loc[2])*sum(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col))
-
-            After = sum(sum(err_exp_1_plus[i, j] for j = 1:no_col) +
-                    (-1)^lom[a, 1]*sum(err_exp_1_pm[i, j] for j = 1:no_col) +
-                    (-1)^lom[a, 2]*sum(err_exp_1_mp[i, j] for j = 1:no_col) +
-                    (-1)^lom[a, 3]*sum(err_exp_1_min[i, j] for j = 1:no_col) for i = (loc[1]+1):no_row)
+            Before = prod(prod(meas_exp_1_plus[i, j] for j = 1:no_col) +
+                        (-1)^lom[a, 1]*prod(meas_exp_1_pm[i, j] for j = 1:no_col) +
+                        (-1)^lom[a, 2]*prod(meas_exp_1_mp[i, j] for j = 1:no_col) +
+                        (-1)^lom[a, 3]*prod(meas_exp_1_min[i, j] for j = 1:no_col) for i = 1:(loc[1]-1))
+            if loc[2] == no_col
+                Current = (prod(meas_exp_1_plus[loc[1], j] for j = 1:no_loc) +
+                            (-1)^lom[a, 1]*prod(meas_exp_1_pm[loc[1], j] for j = 1:no_loc) +
+                            (-1)^lom[a, 2]*prod(meas_exp_1_mp[loc[1], j] for j = 1:no_loc) +
+                            (-1)^lom[a, 3]*prod(meas_exp_1_min[loc[1], j] for j = 1:no_loc))
+            else
+                Current = (prod(meas_exp_1_plus[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col) +
+                            (-1)^lom[a, 1]*prod(meas_exp_1_pm[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col) +
+                            (-1)^lom[a, 2]*prod(meas_exp_1_mp[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col) +
+                            (-1)^lom[a, 3]*prod(meas_exp_1_min[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col))
+            end
+            After = prod(prod(err_exp_1_plus[i, j] for j = 1:no_col) +
+                    (-1)^lom[a, 1]*prod(err_exp_1_pm[i, j] for j = 1:no_col) +
+                    (-1)^lom[a, 2]*prod(err_exp_1_mp[i, j] for j = 1:no_col) +
+                    (-1)^lom[a, 3]*prod(err_exp_1_min[i, j] for j = 1:no_col) for i = (loc[1]+1):no_row)
         end
 
         A[a] = Before*Current*After
+    end
+
+    # product of all norm
+    current_norm = 1
+    for i = 1:loc[1]
+        for j = 1:loc[2]
+            current_norm = current_norm*norms[i, j]
+        end
     end
 
     ans = B*sum(A[i] for i = 1:4)/(2^(no_row+1) * 4)
     return ans
 end
 
-function pdf_2()
+function pdf_2(meas_exp_1, meas_exp_2, err_exp_2, norms, norms_1, loc, block_size)
 
+    # setup all of the matrices
+    no_row = block_size[1]
+    no_col = block_size[2]
+    rep = block_size[3]
+
+    err_exp_2_zero = err_exp_2[1][:, :, loc[3]]
+    err_exp_2_one = err_exp_2[2][:, :, loc[3]]
+    err_exp_2_zo = err_exp_2[3][:, :, loc[3]]
+    err_exp_2_oz = err_exp_2[4][:, :, loc[3]]
+
+    # measurement expectation values
+    meas_exp_1_plus = meas_exp_1[1][:, :, loc[3]]
+    meas_exp_1_min = meas_exp_1[2][:, :, loc[3]]
+    meas_exp_1_pm = meas_exp_1[3][:, :, loc[3]]
+    meas_exp_1_mp = meas_exp_1[4][:, :, loc[3]]
+
+    meas_exp_2_zero = meas_exp_2[1][:, :, loc[3]]
+    meas_exp_2_one = meas_exp_2[2][:, :, loc[3]]
+    meas_exp_2_zo = meas_exp_2[3][:, :, loc[3]]
+    meas_exp_2_oz = meas_exp_2[4][:, :, loc[3]]
+
+    norms = norms[:, :, loc[3]]
+    norms_1 = norms_1[:, :, loc[3]]
+
+    ### pdf begins ###
+    # the constant
+    lom = [0 0 0; 1 0 1; 0 1 1; 1 1 0] # location of minuses
+    A = zeros(Complex{Float64}, 4)
+
+    for i = 1:4
+        A[a] = prod(prod(meas_exp_1_plus[i, j] for j = 1:no_col) +
+                (-1)^lom[a, 1]*prod(meas_exp_1_pm[i, j] for j = 1:no_col) +
+                (-1)^lom[a, 2]*prod(meas_exp_1_mp[i, j] for j = 1:no_col) +
+                (-1)^lom[a, 3]*prod(meas_exp_1_min[i, j] for j = 1:no_col) for i = 1:no_row)
+    end
+
+    # get product of all block 1 norms
+    current_norm_1 = 1
+    for i = 1:no_row
+        for j = 1:no_col
+            current_norm_1 = current_norm_1*norms_1[i, j]
+        end
+    end
+
+    A = sum(A[i] for i = 1:4)/(2^(no_row + 1) * current_norm_1)
+
+    # the variable factor
+    B = zeros(Complex{Float64}, 2)
+    lom2 = [0 0 0; 1 1 0]
+
+    for b = 1:2
+        if no_row*rep == 1
+            Before = 1
+            After = 1
+            if no_col == 1
+                Current = meas_exp_2_zero[loc[1], loc[2]] +
+                            (-1)^lom2[b, 1]*meas_exp_2_zo[loc[1], loc[2]] +
+                            (-1)^lom2[b, 2]*meas_exp_2_oz[loc[1], loc[2]] +
+                            (-1)^lom2[b, 3]*meas_exp_2_one[loc[1], loc[2]]
+            else
+                if loc[2] == no_col
+                    Current = prod(meas_exp_2_zero[loc[1], j] for j = 1:no_col) +
+                                (-1)^lom2[b, 1]*prod(meas_exp_2_zo[loc[1], j] for j = 1:no_col) +
+                                (-1)^lom2[b, 2]*prod(meas_exp_2_oz[loc[1], j] for j = 1:no_col) +
+                                (-1)^lom2[b, 3]*prod(meas_exp_2_one[loc[1], j] for j = 1:no_col)
+                else
+                    Current = prod(meas_exp_2_zero[loc[1], j] for j = 1:loc[2])*prod(err_exp_2_zero[loc[1], j] for j = loc[2]+1:no_col) +
+                                (-1)^lom2[b, 1]*prod(meas_exp_2_zo[loc[1], j] for j = 1:no_col)*prod(err_exp_2_zo[loc[1], j] for j = loc[2]+1:no_col) +
+                                (-1)^lom2[b, 2]*prod(meas_exp_2_oz[loc[1], j] for j = 1:no_col)*prod(err_exp_2_oz[loc[1], j] for j = loc[2]+1:no_col) +
+                                (-1)^lom2[b, 3]*prod(meas_exp_2_one[loc[1], j] for j = 1:no_col)*prod(err_exp_2_one[loc[1], j] for j = loc[2]+1:no_col)
+                end
+            end
+        elseif loc[1] == 1
+            Before = 1
+            if loc[2] == no_col
+                Current = (prod(meas_exp_2_zero[loc[1], j] for j = 1:no_col) +
+                            (-1)^lom2[b, 1]*prod(meas_exp_2_zo[loc[1], j] for j = 1:no_col) +
+                            (-1)^lom2[b, 2]*prod(meas_exp_2_oz[loc[1], j] for j = 1:no_col) +
+                            (-1)^lom2[b, 3]*prod(meas_exp_2_one[loc[1], j] for j = 1:no_col))
+            else
+                Current = (prod(meas_exp_2_zero[loc[1], j] for j = 1:loc[2])*prod(err_exp_2_zero[loc[1], j] for j = loc[2]+1:no_col) +
+                            (-1)^lom2[b, 1]*prod(meas_exp_2_zo[loc[1], j] for j = 1:loc[2])*prod(err_exp_2_zo[loc[1], j] for j = loc[2]+1:no_col) +
+                            (-1)^lom2[b, 2]*prod(meas_exp_2_oz[loc[1], j] for j = 1:loc[2])*prod(err_exp_2_oz[loc[1], j] for j = loc[2]+1:no_col) +
+                            (-1)^lom2[b, 3]*prod(meas_exp_2_one[loc[1], j] for j = 1:loc[2])*prod(err_exp_2_one[loc[1], j] for j = loc[2]+1:no_col))
+            end
+            After = prod(prod(err_exp_2_zero[i, j] for j = 1:no_col) +
+                        (-1)^lom2[b, 1]*prod(err_exp_2_zo[i, j] for j = 1:no_col) +
+                        (-1)^lom2[b, 2]*prod(err_exp_2_oz[i, j] for j = 1:no_col) +
+                        (-1)^lom2[b, 3]*prod(err_exp_2_one[i, j] for j = 1:no_col) for i = (loc[1] + 1):no_row*rep)
+        elseif loc[1] == no_row
+            Before = prod(prod(meas_exp_2_zero[i, j] for j = 1:no_col) +
+                        (-1)^lom2[b, 1]*prod(meas_exp_2_zo[i, j] for j = 1:no_col) +
+                        (-1)^lom2[b, 2]*prod(meas_exp_2_oz[i, j] for j = 1:no_col) +
+                        (-1)^lom2[b, 3]*prod(meas_exp_2_one[i, j] for j = 1:no_col) for i = 1:(loc[1]-1))
+            if loc[2] == no_col
+                Current = (prod(meas_exp_2_zero[loc[1], j] for j = 1:no_loc) +
+                            (-1)^lom2[b, 1]*prod(meas_exp_2_zo[loc[1], j] for j = 1:no_loc) +
+                            (-1)^lom2[b, 2]*prod(meas_exp_2_oz[loc[1], j] for j = 1:no_loc) +
+                            (-1)^lom2[b, 3]*prod(meas_exp_2_one[loc[1], j] for j = 1:no_loc))
+            else
+                Current = prod(meas_exp_2_zero[loc[1], j] for j = 1:loc[2])*prod(err_exp_2_zero[loc[1], j] for j = (loc[2]+1):no_col) +
+                            (-1)^lom2[b, 1]*prod(meas_exp_2_zo[loc[1], j] for j = 1:loc[2])*prod(err_exp_2_zo[loc[1], j] for j = (loc[2]+1):no_col) +
+                            (-1)^lom2[b, 2]*prod(meas_exp_2_oz[loc[1], j] for j = 1:loc[2])*prod(err_exp_2_oz[loc[1], j] for j = (loc[2]+1):no_col) +
+                            (-1)^lom2[b, 3]*prod(meas_exp_2_one[loc[1], j] for j = 1:loc[2])*prod(err_exp_2_one[loc[1], j] for j = (loc[2]+1):no_col)
+            end
+
+
+            After = 1
+        else
+            Before = prod(prod(meas_exp_2_zero[i, j] for j = 1:no_col) +
+                        (-1)^lom2[b, 1]*prod(meas_exp_2_zo[i, j] for j = 1:no_col) +
+                        (-1)^lom2[b, 2]*prod(meas_exp_2_oz[i, j] for j = 1:no_col) +
+                        (-1)^lom2[b, 3]*prod(meas_exp_2_one[i, j] for j = 1:no_col) for i = 1:(loc[1]-1))
+
+            if loc[2] == no_col
+                Current = (prod(meas_exp_2_zero[loc[1], j] for j = 1:no_loc) +
+                            (-1)^lom2[b, 1]*prod(meas_exp_2_zo[loc[1], j] for j = 1:no_loc) +
+                            (-1)^lom2[b, 2]*prod(meas_exp_2_oz[loc[1], j] for j = 1:no_loc) +
+                            (-1)^lom2[b, 3]*prod(meas_exp_2_one[loc[1], j] for j = 1:no_loc))
+            else
+                Current = (prod(meas_exp_2_zero[loc[1], j] for j = 1:loc[2])*prod(err_exp_2_zero[loc[1], j] for j = (loc[2]+1):no_col) +
+                            (-1)^lom2[b, 1]*prod(meas_exp_2_zo[loc[1], j] for j = 1:loc[2])*prod(err_exp_2_zo[loc[1], j] for j = (loc[2]+1):no_col) +
+                            (-1)^lom2[b, 2]*prod(meas_exp_2_oz[loc[1], j] for j = 1:loc[2])*prod(err_exp_2_oz[loc[1], j] for j = (loc[2]+1):no_col) +
+                            (-1)^lom2[b, 3]*prod(meas_exp_2_one[loc[1], j] for j = 1:loc[2])*prod(err_exp_2_one[loc[1], j] for j = (loc[2]+1):no_col))
+            end
+
+            After = prod(prod(err_exp_2_zero[i, j] for j = 1:no_col) +
+                    (-1)^lom2[b, 1]*prod(err_exp_2_zo[i, j] for j = 1:no_col) +
+                    (-1)^lom2[b, 2]*prod(err_exp_2_oz[i, j] for j = 1:no_col) +
+                    (-1)^lom2[b, 3]*prod(err_exp_2_one[i, j] for j = 1:no_col) for i = (loc[1]+1):no_row)
+
+        end
+
+        B[b] = Before*Current*After
+    end
+
+    # get product of all block 2 norms
+    current_norm_2 = 1
+    for i = 1:loc[1]
+        for j = 1:loc[2]
+            current_norm_2 = current_norm_2*norms[i, j]
+        end
+    end
+
+
+    ans = A*sum(B[i] for i = 1:2)/(2^(no_row) * 4 * current_norm_2)
+    return ans
 end
