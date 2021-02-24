@@ -1,7 +1,7 @@
 using QuantumOptics
 using Distributions
 
-function decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, sample_no, decode_type, measure)
+function decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, sample_no, decode_type, measure, bias)
     # initialise empty arrays
     outcomes_1 = zeros(Bool, sample_no)
     outcomes_2 = zeros(Bool, sample_no)
@@ -9,14 +9,21 @@ function decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, 
     # how to decode?
     if decode_type == "naive"
         # decode each qubit individually
-        samples_out_1 = naive_decode(samples_1, N_ord[1], block_size, measure[1])
-        samples_out_2 = naive_decode(samples_2, N_ord[2], block_size, measure[2])
+        samples_out_1 = naive_decode(samples_1, N_ord[1], block_size, measure[1], 0)
+        samples_out_2 = naive_decode(samples_2, N_ord[2], block_size, measure[2], 0)
 
         # decide outcome through these
         outcomes_1 = block_decode(samples_out_1, 1)
         outcomes_2 = block_decode(samples_out_2, 2)
 
     elseif decode_type == "bias"
+        # decode each qubit individually
+        samples_out_1 = naive_decode(samples_1, N_ord[1], block_size, measure[1], bias[1])
+        samples_out_2 = naive_decode(samples_2, N_ord[2], block_size, measure[2], bias[2])
+
+        # decide outcome through these
+        outcomes_1 = block_decode(samples_out_1, 1)
+        outcomes_2 = block_decode(samples_out_2, 2)
 
     elseif decode_type == "max_likelihood"
 
@@ -28,7 +35,7 @@ end
 #########################################################
 # different functions, different decoding types
 
-function naive_decode(samples, N_ord, block_size, measure)
+function naive_decode(samples, N_ord, block_size, measure, bias)
     # decide the outcome for each qubit individually
     row, col, sample_no = size(samples)
     samples_out = zeros(Int64, (row, col, sample_no))
@@ -36,12 +43,10 @@ function naive_decode(samples, N_ord, block_size, measure)
     for k = 1:sample_no
         for i = 1:row
             for j = 1:col
-                samples_out[i, j, k] = meas_outcome(samples[i, j, k], N_ord, measure, 0)
+                samples_out[i, j, k] = meas_outcome(samples[i, j, k], N_ord, measure, bias)
             end
         end
     end
-
-
 
     return samples_out
 end
@@ -122,19 +127,39 @@ function block_decode(samples_out, block_no, block_size)
     elseif block_no == 2
         # take parities of each row
         for k = 1:sample_no
-            row_par = fill(1, (rep, div(col, rep)))
+            row_par = fill(1, (rep, row, sample_no))
 
             # take row parities
-            for i = 1:row
-                for j = 1:rep
-                    row_par[j, i] = prod(samples_out[i, l] for l = (j-1)*div(col, rep)+1:j*div(col, rep))
+            for k = 1:sample_no
+                for i = 1:row
+                    for j = 1:rep
+                        row_par[j, i, k] = prod(samples_out[i, l, k] for l = (j-1)*div(col, rep)+1:j*div(col, rep))
+                    end
                 end
             end
             # majority vote over repetitions
-
+            row_par_real = fill(1, (row, sample_no))
+            for k = 1:sample_no
+                for i = 1:row
+                    par_maj = count(l->(l==1), row_par[:, i, k])
+                    if par_maj > rep/2
+                        row_par_real[i, k] = 1
+                    else
+                        row_par_real[i, k] = -1
+                    end
+                end
+            end
 
             # majority vote over all column parities
-
+            maj = zeros(Bool, sample_no)
+            for k = 1:sample_no
+                row_maj = count(l->(l==1), row_par_real[:, k])
+                if row_maj > row/2
+                    maj[k] = true
+                else
+                    maj[k] = false
+                end
+            end
         end
     end
 

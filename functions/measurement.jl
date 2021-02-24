@@ -70,7 +70,8 @@ end
 function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, xbasis, N_ord, samples_1, code, block_size, meas_ops, meas_exp, loc, meas_exp_1, norms_1)
 
     # find the envelope constant function
-    ceil_constant = find_max_dist(block_size, block_no, measure_type, meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, code, loc)*1.1
+    # ceil_constant = find_max_dist(block_size, block_no, measure_type, meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, code, loc)*1.1
+    ceil_constant = 1
     counter = false
 
     if block_no == 1
@@ -78,7 +79,7 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
         while counter == false
             # sample a measurement
             samples[loc[1], loc[2], loc[3]] = sample_generator(code, measure_type, xbasis[1])
-            meas_exp[1][loc[1], loc[2], loc[3]], meas_exp[2][loc[1], loc[2], loc[3]], meas_exp[2][loc[1], loc[2], loc[3]], meas_exp[2][loc[1], loc[2], loc[3]] = meas_exp(samples[loc[1], loc[2], loc[3]], err_prep_1[1], err_prep_1[2])
+            meas_exp[1][loc[1], loc[2], loc[3]], meas_exp[2][loc[1], loc[2], loc[3]], meas_exp[3][loc[1], loc[2], loc[3]], meas_exp[4][loc[1], loc[2], loc[3]] = meas_exp(meas_ops[block_no], samples[loc[1], loc[2], loc[3]], err_prep_1[1], err_prep_1[2])
 
             f_x = pdf_1(meas_exp, err_exp_1, err_exp_2, norms, loc, block_size)
 
@@ -96,6 +97,7 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
         while counter == false
             # sample a measurement
             samples[loc[1], loc[2], loc[3]] = sample_generator(code, measure_type, xbasis[2])
+            meas_exp[1][loc[1], loc[2], loc[3]], meas_exp[2][loc[1], loc[2], loc[3]], meas_exp[3][loc[1], loc[2], loc[3]], meas_exp[4][loc[1], loc[2], loc[3]] = meas_exp(meas_ops[block_no], samples[loc[1], loc[2], loc[3]], err_prep_2[1], err_prep_2[2])
 
             f_x = pdf_2(meas_exp_1, meas_exp, err_exp_2, norms, norms_1, loc, block_size)
 

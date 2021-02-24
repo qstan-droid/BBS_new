@@ -1,8 +1,11 @@
 include("code_prep.jl")
 include("errors.jl")
+include("measurement.jl")
+include("decode.jl")
+include("fidelity.jl")
 
 # N_ord, dim and alpha are lists
-function circuit(code, N_ord, dim, alpha, block_size, err_place, err_info, measure, decode_type, sample_no)
+function circuit(code, N_ord, dim, alpha, block_size, err_place, err_info, measure, decode_type, sample_no, bias)
 
     # begin code preparation
     xbasis_1 = code_prep(N_ord[1], dim[1], alpha[1], code[1])
@@ -52,7 +55,13 @@ function circuit(code, N_ord, dim, alpha, block_size, err_place, err_info, measu
     ###################################################################################################
     # Thus comes decoding
     # outcomes are the decoded outcomes for each block, should be an array of length(sample_no) for each
-    outcomes_1, outcomes_2 = decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, sample_no, decode_type)
+    # bias = [bias_amplitude_1, bias_amplitude_2]
+    outcomes_1, outcomes_2 = decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, sample_no, decode_type, bias)
 
+    ###################################################################################################
+    # First we find the
+    P = find_coeff(meas_exp_1, meas_exp_2, block_size)
+    ave_fidelity = fid_ave(outcomes_1, outcomes_2, P)
 
+    return ave_fidelity
 end
