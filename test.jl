@@ -1,19 +1,26 @@
-include("errors.jl")
+include("functions//circuit.jl")
 
-# place to test functions
-a = fill(1.0, (2, 3))
-a = [1 1 1; 2 2 2]
-b = fill(1.0, (2, 9))
-c = fill(0.0, (2, 3))
-d = fill(0.0, (2, 9))
+# parameters
+code = ["binomial", "binomial"]
+N_ord = [3, 3]
+alpha = [10, 10]
+block_size = [1, 1, 1]
+err_place = [true, false, true, false]
+err_info = [0.01, 0.0, 0.01, 0.0]
+measure = ["heterodyne", "heterodyne"] # only heterodyne
+decode_type = "naive" # naive or bias
+sample_no = 10
+bias = [0, 0]
 
-for i = 1:4
-    println("yes")
-
+if code == "cat"
+    dim_1 = convert(Int64, round(2*alpha[1]^2 + alpha[1], digits=0))
+    dim_2 = convert(Int64, round(2*alpha[2]^2 + alpha[2], digits=0))
+elseif code == "binomial"
+    dim_1 = (alpha[1]+1)*(N_ord[1])
+    dim_2 = (alpha[2]+1)*(N_ord[2])
 end
 
-a1, c1, b1, d1 = error_propagation(a, c, b, d, [2, 3, 3], [1, 1])
-println("block_1_loss: ", a1)
-println("block_1_dephase: ", c1)
-println("block_2_loss: ", b1)
-println("block_2_dephase: ", d1)
+dim = [dim_1, dim_2]
+
+
+@time ave_fid, fid_list, samples_1, samples_2 = circuit(code, N_ord, dim, alpha, block_size, err_place, err_info, measure, decode_type, sample_no, bias)

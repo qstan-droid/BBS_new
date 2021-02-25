@@ -1,17 +1,19 @@
 using QuantumOptics
 using Distributions
 
-function measuremet_operator(meas_type, xbasis, N_ord)
+function measurement_operator(meas_type, xbasis, N_ord)
+
+    coh_space = FockBasis(xbasis[9])
 
     if meas_type == "heterodyne"
         meas = function(x)
-            coherentstate(xbasis[9], x)/pi
+            coherentstate(coh_space, x)/pi
         end
 
     elseif meas_type == "opt_phase"
         # Define the measurement operators
         meas = function(x)
-            sum(exp(1im*n*x)*fockstate(xbasis[9], n) for n = 0:xbasis[8]*N_ord)/(xbasis[8]*N_ord + 1)
+            sum(exp(1im*n*x)*fockstate(coh_space, n) for n = 0:xbasis[8]*N_ord)/(xbasis[8]*N_ord + 1)
         end
     elseif meas_type == "homodyne"
 
@@ -21,7 +23,7 @@ function measuremet_operator(meas_type, xbasis, N_ord)
 end
 
 # Finds expectation value of measurements
-function meas_exp(meas_op, sample, err_prep_plus, err_prep_min)
+function meas_exp_prep(meas_op, sample, err_prep_plus, err_prep_min)
     meas_exp_plus = dagger(err_prep_plus)*meas_op(sample)*err_prep_plus
     meas_exp_min = dagger(err_prep_min)*meas_op(sample)*err_prep_min
     meas_exp_pm = dagger(err_prep_plus)*meas_op(sample)*err_prep_min
@@ -31,7 +33,7 @@ function meas_exp(meas_op, sample, err_prep_plus, err_prep_min)
 end
 
 ###########################
-function measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, meas_exp_1, xbasis, N_ord, samples_1, code, block_size)
+function measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, meas_exp_1, xbasis, N_ord, samples_1, norms_1, code, block_size)
 
     #### Rejection sampling
     meas_op_1 = measurement_operator(measure_type[1], xbasis[1], N_ord[1])
@@ -40,9 +42,9 @@ function measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block
 
     # prepare the container for samples
     if block_no == 1
-        row, col, sample_no = size(err_prep_1)
+        row, col, sample_no = size(err_prep_1[1])
     elseif block_no == 2
-        row, col, sample_no = size(err_prep_2)
+        row, col, sample_no = size(err_prep_2[1])
     end
 
     samples = zeros(Complex{Float64}, row, col, sample_no)
@@ -58,7 +60,7 @@ function measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block
     for k = 1:sample_no
         for i = 1:row
             for j = 1:col
-                samples[i, j, k], norms[i, j, k], meas_exp[1][i, j, k], meas_exp[2][i, j, k], meas_exp[3][i, j, k], meas_exp[4][i, j, k] = rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, xbasis, N_ord, samples_1, code, block_size, meas_ops, meas_exp, [i, j, k], meas_exp_1, norms_1)
+                samples[i, j, k], norms[i, j, k], meas_exp[1][i, j, k], meas_exp[2][i, j, k], meas_exp[3][i, j, k], meas_exp[4][i, j, k] = rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, xbasis, N_ord, samples, samples_1, code, block_size, meas_ops, meas_exp, [i, j, k], meas_exp_1, norms_1)
             end
         end
     end
@@ -66,20 +68,26 @@ function measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block
     return samples, norms, meas_exp[1], meas_exp[2], meas_exp[3], meas_exp[4]
 end
 
-# block_no, samples, samples_1, err_prep_1, err_prep_2, err_exp_1, err_exp_2, code, measure_type, loc, xbasis, meas_ops, meas_exp, block_size
-function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, xbasis, N_ord, samples_1, code, block_size, meas_ops, meas_exp, loc, meas_exp_1, norms_1)
+function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, xbasis, N_ord, samples, samples_1, code, block_size, meas_ops, meas_exp, loc, meas_exp_1, norms_1)
 
     # find the envelope constant function
     # ceil_constant = find_max_dist(block_size, block_no, measure_type, meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, code, loc)*1.1
     ceil_constant = 1
     counter = false
 
+    # unpack loc
+    x = loc[1]
+    y = loc[2]
+    z = loc[3]
+
     if block_no == 1
 
         while counter == false
+
+
             # sample a measurement
-            samples[loc[1], loc[2], loc[3]] = sample_generator(code, measure_type, xbasis[1])
-            meas_exp[1][loc[1], loc[2], loc[3]], meas_exp[2][loc[1], loc[2], loc[3]], meas_exp[3][loc[1], loc[2], loc[3]], meas_exp[4][loc[1], loc[2], loc[3]] = meas_exp(meas_ops[block_no], samples[loc[1], loc[2], loc[3]], err_prep_1[1], err_prep_1[2])
+            samples[x, y, z] = sample_generator(code[1], measure_type[1], xbasis[1])
+            meas_exp[1][x, y, z], meas_exp[2][x, y, z], meas_exp[3][x, y, z], meas_exp[4][x, y, z] = meas_exp_prep(meas_ops[block_no], samples[x, y, z], err_prep_1[1][x, y, z], err_prep_1[2][x, y, z])
 
             f_x = pdf_1(meas_exp, err_exp_1, err_exp_2, norms, loc, block_size)
 
@@ -96,8 +104,8 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
 
         while counter == false
             # sample a measurement
-            samples[loc[1], loc[2], loc[3]] = sample_generator(code, measure_type, xbasis[2])
-            meas_exp[1][loc[1], loc[2], loc[3]], meas_exp[2][loc[1], loc[2], loc[3]], meas_exp[3][loc[1], loc[2], loc[3]], meas_exp[4][loc[1], loc[2], loc[3]] = meas_exp(meas_ops[block_no], samples[loc[1], loc[2], loc[3]], err_prep_2[1], err_prep_2[2])
+            samples[x, y, z] = sample_generator(code[2], measure_type[2], xbasis[2])
+            meas_exp[1][x, y, z], meas_exp[2][x, y, z], meas_exp[3][x, y, z], meas_exp[4][x, y, z] = meas_exp(meas_ops[2], samples[x, y, z], err_prep_2[1][x, y, z], err_prep_2[2][x, y, z])
 
             f_x = pdf_2(meas_exp_1, meas_exp, err_exp_2, norms, norms_1, loc, block_size)
 
@@ -111,9 +119,9 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
         end
     end
 
-    norms[loc[1], loc[2], loc[3]] = f_x
+    norms[x, y, z] = f_x
 
-    return samples[loc[1], loc[2], loc[3]], norms[loc[1], loc[2], loc[3]], meas_exp[1][loc[1], loc[2], loc[3]], meas_exp[2][loc[1], loc[2], loc[3]], meas_exp[3][loc[1], loc[2], loc[3]], meas_exp[4][loc[1], loc[2], loc[3]]
+    return samples[x, y, z], norms[x, y, z], meas_exp[1][x, y, z], meas_exp[2][x, y, z], meas_exp[3][x, y, z], meas_exp[4][x, y, z]
 end
 
 function find_max_dist(block_size, block_no, meas_type, meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, xbasis, code, loc)

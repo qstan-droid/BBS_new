@@ -9,10 +9,10 @@ function find_coeff(meas_exp_1, meas_exp_2, block_size)
     P = zeros(Complex{Float64}, (4, sample_no))
 
     for k = 1:sample_no
-        A_plus = (prod(prod(sqrt(abs(meas_exp_1[1][i, j, k]*pi)) for j = 1:col) + prod(sqrt(abs(meas_exp_1[2][i, j, k]*pi))for j = 1:col) for i = 1:row) +
-                    prod(prod(sqrt(abs(meas_exp_1[1][i, j, k]*pi))for j = 1:col) - prod(sqrt(abs(meas_exp_1[2][i, j, k]*pi))for j = 1:col) for i = 1:row))/(sqrt(2)^(row + 1))
-        A_min = (prod(prod(sqrt(abs(meas_exp_1[1][i, j, k]*pi)) for j = 1:col) + prod(sqrt(abs(meas_exp_1[2][i, j, k]*pi))for j = 1:col) for i = 1:row) -
-                    prod(prod(sqrt(abs(meas_exp_1[1][i, j, k]*pi))for j = 1:col) - prod(sqrt(abs(meas_exp_1[2][i, j, k]*pi))for j = 1:col) for i = 1:row))/(sqrt(2)^(row + 1))
+        A_plus = (prod(prod(sqrt(abs(meas_exp_1[1][i, j, k]*pi)) for j = 1:col) + prod(sqrt(abs(meas_exp_1[2][i, j, k]*pi)) for j = 1:col) for i = 1:row) +
+                    prod(prod(sqrt(abs(meas_exp_1[1][i, j, k]*pi)) for j = 1:col) - prod(sqrt(abs(meas_exp_1[2][i, j, k]*pi)) for j = 1:col) for i = 1:row))/(sqrt(2)^(row + 1))
+        A_min = (prod(prod(sqrt(abs(meas_exp_1[1][i, j, k]*pi)) for j = 1:col) + prod(sqrt(abs(meas_exp_1[2][i, j, k]*pi)) for j = 1:col) for i = 1:row) -
+                    prod(prod(sqrt(abs(meas_exp_1[1][i, j, k]*pi)) for j = 1:col) - prod(sqrt(abs(meas_exp_1[2][i, j, k]*pi)) for j = 1:col) for i = 1:row))/(sqrt(2)^(row + 1))
 
         B_plus = (prod(prod(sqrt(abs(meas_exp_2[1][i, j, k]*pi)) for j = 1:col) + prod(sqrt(abs(meas_exp_2[2][i, j, k]*pi)) for j = 1:col) for i = 1:row*rep))/(sqrt(2)^(row*rep))
         B_min = (prod(prod(sqrt(abs(meas_exp_2[1][i, j, k]*pi)) for j = 1:col) - prod(sqrt(abs(meas_exp_2[2][i, j, k]*pi)) for j = 1:col) for i = 1:row*rep))/(sqrt(2)^(row*rep))

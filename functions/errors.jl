@@ -2,14 +2,14 @@ using QuantumOptics
 using Distributions
 
 function loss_sample(err_place, nu_loss, m, n, xbasis, sample_no)
-    loss_samples = zeros(n, m, sample_no)
+    loss_samples = zeros(Int64, (n, m, sample_no))
     loss_norm = fill(1.0, (n, m, sample_no))
 
     if err_place == true
         for k = 1:sample_no
             for i = 1:n
                 for j = 1:m
-                    loss_samples[i, j, k], loss_norm[i, j, k] = loss_sample(nu_loss, xbasis)
+                    loss_samples[i, j, k], loss_norm[i, j, k] = discrete_loss_sampling(nu_loss, xbasis)
                 end
             end
         end
@@ -39,23 +39,25 @@ function dephase_sample(err_place, nu_dephase, m, n, sample_no)
     return dephase_samples, dephase_norm
 end
 
-function error_propagation(loss_1, dephase_1, loss_2, dephase_2, block, N_ord)
+function error_propagation(loss_1, dephase_1, loss_2, dephase_2, block, N_ord, sample_no)
     n = block[1]
     m = block[2]
     no_rep = block[3]
 
-    for i = 1:n
-        # do the spread from block 1 to block 2
-        for j = 1:m
-            for k = 1:no_rep
-                dephase_2[i, m*(k - 1)+j] = dephase_2[i, m*(k - 1)+j] + pi*loss_1[i, j]/(N_ord[1]*N_ord[2])
+    for l = 1:sample_no
+        for i = 1:n
+            # do the spread from block 1 to block 2
+            for j = 1:m
+                for k = 1:no_rep
+                    dephase_2[i, m*(k - 1)+j, l] = dephase_2[i, m*(k - 1)+j, l] + pi*loss_1[i, j, l]/(N_ord[1]*N_ord[2])
+                end
             end
-        end
 
-        # then do spread from block 2 to block 1
-        for j = 1:m
-            for k = 1:no_rep
-                dephase_1[i, j] = dephase_1[i, j] + pi*loss_2[i, m*(k - 1)+j]/(N_ord[1]*N_ord[2])
+            # then do spread from block 2 to block 1
+            for j = 1:m
+                for k = 1:no_rep
+                    dephase_1[i, j, l] = dephase_1[i, j, l] + pi*loss_2[i, m*(k - 1)+j, l]/(N_ord[1]*N_ord[2])
+                end
             end
         end
     end
@@ -76,9 +78,9 @@ function discrete_loss_sampling(nu_l, xbasis)
     # initialise
     k::Int64 = 0
     s = loss_pdf(nu_l, k, xbasis)
-    n = rand(Unifor(0, 1))
+    n = rand(Uniform(0, 1))
 
-    while s < n
+    while norm(s) < n
         k = k + 1
         s = s + loss_pdf(nu_l, k, xbasis)
     end
@@ -102,7 +104,7 @@ function error_prep(loss, dephase, nu_l, xbasis, block_no)
     a_b = xbasis[4]
     n_b = xbasis[3]
 
-    E(x, phi, nu) = (((1 - exp(-nu))^(x/2))/(sqrtfactorial(big(x))))*exp((-nu_l/2 + phi)*dense(n_b))*a_b^(x)
+    E(x::Int64, phi, nu) = (((1 - exp(-nu))^(x/2))/(sqrt(factorial(big(x)))))*exp((-nu_l/2 + phi)*dense(n_b))*(a_b^x)
 
     row, col, sample_no = size(loss)
 
@@ -127,10 +129,10 @@ function error_exp(err_prep_1, err_prep_2)
 
     row, col, sample_no = size(err_prep_1)
 
-    err_exp_1 = zeros(Complex(Float64), (row, col, sample_no))
-    err_exp_2 = zeros(Complex(Float64), (row, col, sample_no))
-    err_exp_12 = zeros(Complex(Float64), (row, col, sample_no))
-    err_exp_21 = zeros(Complex(Float64), (row, col, sample_no))
+    err_exp_1 = zeros(Complex{Float64}, (row, col, sample_no))
+    err_exp_2 = zeros(Complex{Float64}, (row, col, sample_no))
+    err_exp_12 = zeros(Complex{Float64}, (row, col, sample_no))
+    err_exp_21 = zeros(Complex{Float64}, (row, col, sample_no))
 
     for k = 1:sample_no
         for i = 1:row

@@ -21,8 +21,8 @@ function code_prep(N_ord, dim, alpha, code)
     elseif code == "binomial"
         b = FockBasis(dim)
 
-        plus_bin = (sum(sqrt(binomial(N+1, i))*fockstate(b, (N_ord)*i) for i = 0:N+1)/(sqrt(2^(N+1))))
-        min_bin = (sum((-1)^(i)*sqrt(binomial(N+1, i))*fockstate(b, (N_ord)*i) for i = 0:N+1)/(sqrt(2^(N+1))))
+        plus_bin = (sum(sqrt((1/(2^(alpha-1)))*(binomial(alpha, k)))*fockstate(b, k*N_ord) for k = 0:alpha))/sqrt(2)
+        min_bin = (sum((-1)^k * sqrt((1/(2^(alpha-1)))*(binomial(alpha, k)))*fockstate(b, k*N_ord) for k = 0:alpha))/sqrt(2)
 
         zero_bin = (plus_bin + min_bin)/(sqrt(2))
         one_bin = (plus_bin - min_bin)/(sqrt(2))
@@ -30,7 +30,7 @@ function code_prep(N_ord, dim, alpha, code)
         n_b = number(b)
         a_b = destroy(b)
 
-        prep_state = [plus_bin, min_bin, n_b, a_b, zero_bin, one_bin, b, N, dim]
+        prep_state = [plus_bin, min_bin, n_b, a_b, zero_bin, one_bin, b, alpha, dim]
     end
 
     return prep_state
