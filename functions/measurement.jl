@@ -7,7 +7,7 @@ function measurement_operator(meas_type, xbasis, N_ord)
 
     if meas_type == "heterodyne"
         meas = function(x)
-            coherentstate(coh_space, x)/pi
+            dagger(coherentstate(coh_space, x))*coherentstate(coh_space, x)/pi
         end
 
     elseif meas_type == "opt_phase"
@@ -24,7 +24,8 @@ end
 
 # Finds expectation value of measurements
 function meas_exp_prep(meas_op, sample, err_prep_plus, err_prep_min)
-    meas_exp_plus = dagger(err_prep_plus)*meas_op(sample)*err_prep_plus
+
+    meas_exp_plus = dagger(err_prep_plus)*(meas_op(sample)*err_prep_plus)
     meas_exp_min = dagger(err_prep_min)*meas_op(sample)*err_prep_min
     meas_exp_pm = dagger(err_prep_plus)*meas_op(sample)*err_prep_min
     meas_exp_mp = dagger(err_prep_min)*meas_op(sample)*err_prep_plus
@@ -60,7 +61,7 @@ function measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block
     for k = 1:sample_no
         for i = 1:row
             for j = 1:col
-                samples[i, j, k], norms[i, j, k], meas_exp[1][i, j, k], meas_exp[2][i, j, k], meas_exp[3][i, j, k], meas_exp[4][i, j, k] = rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, xbasis, N_ord, samples, samples_1, code, block_size, meas_ops, meas_exp, [i, j, k], meas_exp_1, norms_1)
+                samples[i, j, k], norms[i, j, k], meas_exp[1][i, j, k], meas_exp[2][i, j, k], meas_exp[3][i, j, k], meas_exp[4][i, j, k] = rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, xbasis, N_ord, samples, samples_1, code, block_size, meas_ops, meas_exp, [i, j, k], meas_exp_1, norms, norms_1)
             end
         end
     end
@@ -68,7 +69,7 @@ function measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block
     return samples, norms, meas_exp[1], meas_exp[2], meas_exp[3], meas_exp[4]
 end
 
-function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, xbasis, N_ord, samples, samples_1, code, block_size, meas_ops, meas_exp, loc, meas_exp_1, norms_1)
+function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, xbasis, N_ord, samples, samples_1, code, block_size, meas_ops, meas_exp, loc, meas_exp_1, norms, norms_1)
 
     # find the envelope constant function
     # ceil_constant = find_max_dist(block_size, block_no, measure_type, meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, code, loc)*1.1
@@ -81,39 +82,35 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
     z = loc[3]
 
     if block_no == 1
-
         while counter == false
-
-
             # sample a measurement
             samples[x, y, z] = sample_generator(code[1], measure_type[1], xbasis[1])
             meas_exp[1][x, y, z], meas_exp[2][x, y, z], meas_exp[3][x, y, z], meas_exp[4][x, y, z] = meas_exp_prep(meas_ops[block_no], samples[x, y, z], err_prep_1[1][x, y, z], err_prep_1[2][x, y, z])
 
-            f_x = pdf_1(meas_exp, err_exp_1, err_exp_2, norms, loc, block_size)
+            global f_x = pdf_1(meas_exp, err_exp_1, err_exp_2, norms, loc, block_size)
 
             # sample a random number between 1 and max
             u = rand(Uniform(0, ceil_constant))
 
             # check if condition is true
-            if u < f_x
+            if u < abs(f_x)
                 counter = true
             end
         end
 
     elseif block_no == 2
-
         while counter == false
             # sample a measurement
             samples[x, y, z] = sample_generator(code[2], measure_type[2], xbasis[2])
-            meas_exp[1][x, y, z], meas_exp[2][x, y, z], meas_exp[3][x, y, z], meas_exp[4][x, y, z] = meas_exp(meas_ops[2], samples[x, y, z], err_prep_2[1][x, y, z], err_prep_2[2][x, y, z])
+            meas_exp[1][x, y, z], meas_exp[2][x, y, z], meas_exp[3][x, y, z], meas_exp[4][x, y, z] = meas_exp_prep(meas_ops[block_no], samples[x, y, z], err_prep_2[1][x, y, z], err_prep_2[2][x, y, z])
 
-            f_x = pdf_2(meas_exp_1, meas_exp, err_exp_2, norms, norms_1, loc, block_size)
+            global f_x = pdf_2(meas_exp_1, meas_exp, err_exp_2, norms, norms_1, loc, block_size)
 
             # sample a random number
             u = rand(Uniform(0, ceil_constant))
 
             # condition
-            if u < f_x
+            if u < abs(f_x)
                 counter = true
             end
         end
@@ -378,7 +375,7 @@ function pdf_2(meas_exp_1, meas_exp_2, err_exp_2, norms, norms_1, loc, block_siz
     lom = [0 0 0; 1 0 1; 0 1 1; 1 1 0] # location of minuses
     A = zeros(Complex{Float64}, 4)
 
-    for i = 1:4
+    for a = 1:4
         A[a] = prod(prod(meas_exp_1_plus[i, j] for j = 1:no_col) +
                 (-1)^lom[a, 1]*prod(meas_exp_1_pm[i, j] for j = 1:no_col) +
                 (-1)^lom[a, 2]*prod(meas_exp_1_mp[i, j] for j = 1:no_col) +

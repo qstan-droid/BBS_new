@@ -59,12 +59,12 @@ function circuit(code, N_ord, dim, alpha, block_size, err_place, err_info, measu
     # Thus comes decoding
     # outcomes are the decoded outcomes for each block, should be an array of length(sample_no) for each
     # bias = [bias_amplitude_1, bias_amplitude_2]
-    outcomes_1, outcomes_2 = decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, sample_no, decode_type, bias)
+    outcomes_1, outcomes_2 = decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, sample_no, decode_type, measure, bias)
 
     ###################################################################################################
     # First we find the
     P = find_coeff(meas_exp_1, meas_exp_2, block_size)
-    ave_fidelity = fid_ave(outcomes_1, outcomes_2, P)
+    ave_fidelity, fid_list = fid_ave(outcomes_1, outcomes_2, P)
 
     return ave_fidelity, fid_list, samples_1, samples_2
 end

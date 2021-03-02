@@ -4,7 +4,7 @@ using QuantumOptics
 # Finds the coefficients behind each term
 function find_coeff(meas_exp_1, meas_exp_2, block_size)
 
-    row, col, sample_no = size(samples_1)
+    row, col, sample_no = size(meas_exp_1[1])
     rep = block_size[3]
     P = zeros(Complex{Float64}, (4, sample_no))
 
@@ -43,7 +43,9 @@ function fid_ave(outcomes_1, outcomes_2, P)
     psi_ini = (tensor(zero, zero) + tensor(one, one))/sqrt(2)
     psi_ini_dm = dm(psi_ini)
 
-    sample_no = size(outcomes_1)
+    println(size(outcomes_1))
+
+    row, col, sample_no = size(outcomes_1)
     fid_list = zeros(Float64, sample_no)
 
     for k = 1:sample_no
@@ -63,12 +65,12 @@ function fid_ave(outcomes_1, outcomes_2, P)
         psi_corr_dm = dm(psi_corr)
 
         # record fidelity
-        fid_list[k] = real(fidelity(psi_ini_dm, psi_corr_dm))^2
+        fid_list[k] = abs(fidelity(psi_ini_dm, psi_corr_dm))^2
     end
 
     # calculate average fidelity
     fid_ave = sum(fid_list)/sample_no
     println("average_fid: ", fid_ave)
-    return ave_fid
+    return fid_ave, fid_list
 end
 ##################################################

@@ -13,8 +13,8 @@ function decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, 
         samples_out_2 = naive_decode(samples_2, N_ord[2], block_size, measure[2], 0)
 
         # decide outcome through these
-        outcomes_1 = block_decode(samples_out_1, 1)
-        outcomes_2 = block_decode(samples_out_2, 2)
+        outcomes_1 = block_decode(samples_out_1, 1, block_size)
+        outcomes_2 = block_decode(samples_out_2, 2, block_size)
 
     elseif decode_type == "bias"
         # decode each qubit individually
@@ -22,8 +22,11 @@ function decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, 
         samples_out_2 = naive_decode(samples_2, N_ord[2], block_size, measure[2], bias[2])
 
         # decide outcome through these
-        outcomes_1 = block_decode(samples_out_1, 1)
-        outcomes_2 = block_decode(samples_out_2, 2)
+        outcomes_1 = block_decode(samples_out_1, 1, block_size)
+        outcomes_2 = block_decode(samples_out_2, 2, block_size)
+
+    elseif decode_type == "ave_max_like"
+        # 
 
     elseif decode_type == "max_likelihood"
 
@@ -102,6 +105,7 @@ function block_decode(samples_out, block_no, block_size)
     # unpack variables
     rep = block_size[3]
     row, col, sample_no = size(samples_out)
+    maj = zeros(Bool, (row, col, sample_no))
 
     if block_no == 1
         # we compute total parity of each column
@@ -110,7 +114,7 @@ function block_decode(samples_out, block_no, block_size)
             col_par = fill(1, col)
 
             for i = 1:col
-                col_par[i] = prod(samples_out[j, i, k] for j = 1:no_row)
+                col_par[i] = prod(samples_out[j, i, k] for j = 1:row)
             end
 
             # take majority vote over all column parities
