@@ -7,7 +7,7 @@ function measurement_operator(meas_type, xbasis, N_ord)
 
     if meas_type == "heterodyne"
         meas = function(x)
-            dagger(coherentstate(coh_space, x))*coherentstate(coh_space, x)/pi
+            tensor(coherentstate(coh_space, x), dagger(coherentstate(coh_space, x)))
         end
 
     elseif meas_type == "opt_phase"
@@ -25,7 +25,7 @@ end
 # Finds expectation value of measurements
 function meas_exp_prep(meas_op, sample, err_prep_plus, err_prep_min)
 
-    meas_exp_plus = dagger(err_prep_plus)*(meas_op(sample)*err_prep_plus)
+    meas_exp_plus = dagger(err_prep_plus)*meas_op(sample)*err_prep_plus
     meas_exp_min = dagger(err_prep_min)*meas_op(sample)*err_prep_min
     meas_exp_pm = dagger(err_prep_plus)*meas_op(sample)*err_prep_min
     meas_exp_mp = dagger(err_prep_min)*meas_op(sample)*err_prep_plus
@@ -276,10 +276,10 @@ function pdf_1(meas_exp_1, err_exp_1, err_exp_2, norms, loc, block_size)
         elseif loc[1] == 1
             Before = 1
             if loc[2] == no_col
-                Current = (prod(meas_exp_1_plus[loc[1], j] for j = 1:no_loc) +
-                            (-1)^lom[a, 1]*prod(meas_exp_1_pm[loc[1], j] for j = 1:no_loc) +
-                            (-1)^lom[a, 2]*prod(meas_exp_1_mp[loc[1], j] for j = 1:no_loc)+
-                            (-1)^lom[a, 3]*prod(meas_exp_1_min[loc[1], j] for j = 1:no_loc))
+                Current = (prod(meas_exp_1_plus[loc[1], j] for j = 1:no_col) +
+                            (-1)^lom[a, 1]*prod(meas_exp_1_pm[loc[1], j] for j = 1:no_col) +
+                            (-1)^lom[a, 2]*prod(meas_exp_1_mp[loc[1], j] for j = 1:no_col)+
+                            (-1)^lom[a, 3]*prod(meas_exp_1_min[loc[1], j] for j = 1:no_col))
             else
                 Current = (prod(meas_exp_1_plus[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_plus[loc[1], j] for j = (loc[2] + 1):no_col) +
                             (-1)^lom[a, 1]*prod(meas_exp_1_pm[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_pm[loc[1], j] for j = (loc[2] + 1):no_col) +
@@ -296,10 +296,10 @@ function pdf_1(meas_exp_1, err_exp_1, err_exp_2, norms, loc, block_size)
                         (-1)^lom[a, 2]*prod(meas_exp_1_mp[i, j] for j = 1:no_col) +
                         (-1)^lom[a, 3]*prod(meas_exp_1_min[i, j] for j = 1:no_col) for i = 1:(loc[1]-1))
             if loc[2] == no_col
-                Current = (prod(meas_exp_1_plus[loc[1], j] for j = 1:no_loc) +
-                            (-1)^lom[a, 1]*prod(meas_exp_1_pm[loc[1], j] for j = 1:no_loc) +
-                            (-1)^lom[a, 2]*prod(meas_exp_1_mp[loc[1], j] for j = 1:no_loc) +
-                            (-1)^lom[a, 3]*prod(meas_exp_1_min[loc[1], j] for j = 1:no_loc))
+                Current = (prod(meas_exp_1_plus[loc[1], j] for j = 1:no_col) +
+                            (-1)^lom[a, 1]*prod(meas_exp_1_pm[loc[1], j] for j = 1:no_col) +
+                            (-1)^lom[a, 2]*prod(meas_exp_1_mp[loc[1], j] for j = 1:no_col) +
+                            (-1)^lom[a, 3]*prod(meas_exp_1_min[loc[1], j] for j = 1:no_col))
             else
                 Current = (prod(meas_exp_1_plus[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col) +
                             (-1)^lom[a, 1]*prod(meas_exp_1_pm[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col) +
@@ -313,10 +313,10 @@ function pdf_1(meas_exp_1, err_exp_1, err_exp_2, norms, loc, block_size)
                         (-1)^lom[a, 2]*prod(meas_exp_1_mp[i, j] for j = 1:no_col) +
                         (-1)^lom[a, 3]*prod(meas_exp_1_min[i, j] for j = 1:no_col) for i = 1:(loc[1]-1))
             if loc[2] == no_col
-                Current = (prod(meas_exp_1_plus[loc[1], j] for j = 1:no_loc) +
-                            (-1)^lom[a, 1]*prod(meas_exp_1_pm[loc[1], j] for j = 1:no_loc) +
-                            (-1)^lom[a, 2]*prod(meas_exp_1_mp[loc[1], j] for j = 1:no_loc) +
-                            (-1)^lom[a, 3]*prod(meas_exp_1_min[loc[1], j] for j = 1:no_loc))
+                Current = (prod(meas_exp_1_plus[loc[1], j] for j = 1:no_col) +
+                            (-1)^lom[a, 1]*prod(meas_exp_1_pm[loc[1], j] for j = 1:no_col) +
+                            (-1)^lom[a, 2]*prod(meas_exp_1_mp[loc[1], j] for j = 1:no_col) +
+                            (-1)^lom[a, 3]*prod(meas_exp_1_min[loc[1], j] for j = 1:no_col))
             else
                 Current = (prod(meas_exp_1_plus[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col) +
                             (-1)^lom[a, 1]*prod(meas_exp_1_pm[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col) +
@@ -441,10 +441,10 @@ function pdf_2(meas_exp_1, meas_exp_2, err_exp_2, norms, norms_1, loc, block_siz
                         (-1)^lom2[b, 2]*prod(meas_exp_2_oz[i, j] for j = 1:no_col) +
                         (-1)^lom2[b, 3]*prod(meas_exp_2_one[i, j] for j = 1:no_col) for i = 1:(loc[1]-1))
             if loc[2] == no_col
-                Current = (prod(meas_exp_2_zero[loc[1], j] for j = 1:no_loc) +
-                            (-1)^lom2[b, 1]*prod(meas_exp_2_zo[loc[1], j] for j = 1:no_loc) +
-                            (-1)^lom2[b, 2]*prod(meas_exp_2_oz[loc[1], j] for j = 1:no_loc) +
-                            (-1)^lom2[b, 3]*prod(meas_exp_2_one[loc[1], j] for j = 1:no_loc))
+                Current = (prod(meas_exp_2_zero[loc[1], j] for j = 1:no_col) +
+                            (-1)^lom2[b, 1]*prod(meas_exp_2_zo[loc[1], j] for j = 1:no_col) +
+                            (-1)^lom2[b, 2]*prod(meas_exp_2_oz[loc[1], j] for j = 1:no_col) +
+                            (-1)^lom2[b, 3]*prod(meas_exp_2_one[loc[1], j] for j = 1:no_col))
             else
                 Current = prod(meas_exp_2_zero[loc[1], j] for j = 1:loc[2])*prod(err_exp_2_zero[loc[1], j] for j = (loc[2]+1):no_col) +
                             (-1)^lom2[b, 1]*prod(meas_exp_2_zo[loc[1], j] for j = 1:loc[2])*prod(err_exp_2_zo[loc[1], j] for j = (loc[2]+1):no_col) +
@@ -461,10 +461,10 @@ function pdf_2(meas_exp_1, meas_exp_2, err_exp_2, norms, norms_1, loc, block_siz
                         (-1)^lom2[b, 3]*prod(meas_exp_2_one[i, j] for j = 1:no_col) for i = 1:(loc[1]-1))
 
             if loc[2] == no_col
-                Current = (prod(meas_exp_2_zero[loc[1], j] for j = 1:no_loc) +
-                            (-1)^lom2[b, 1]*prod(meas_exp_2_zo[loc[1], j] for j = 1:no_loc) +
-                            (-1)^lom2[b, 2]*prod(meas_exp_2_oz[loc[1], j] for j = 1:no_loc) +
-                            (-1)^lom2[b, 3]*prod(meas_exp_2_one[loc[1], j] for j = 1:no_loc))
+                Current = (prod(meas_exp_2_zero[loc[1], j] for j = 1:no_col) +
+                            (-1)^lom2[b, 1]*prod(meas_exp_2_zo[loc[1], j] for j = 1:no_col) +
+                            (-1)^lom2[b, 2]*prod(meas_exp_2_oz[loc[1], j] for j = 1:no_col) +
+                            (-1)^lom2[b, 3]*prod(meas_exp_2_one[loc[1], j] for j = 1:no_col))
             else
                 Current = (prod(meas_exp_2_zero[loc[1], j] for j = 1:loc[2])*prod(err_exp_2_zero[loc[1], j] for j = (loc[2]+1):no_col) +
                             (-1)^lom2[b, 1]*prod(meas_exp_2_zo[loc[1], j] for j = 1:loc[2])*prod(err_exp_2_zo[loc[1], j] for j = (loc[2]+1):no_col) +

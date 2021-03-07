@@ -1,7 +1,7 @@
 using QuantumOptics
 using Distributions
 
-function decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, sample_no, decode_type, measure, bias)
+function decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, sample_no, decode_type, measure, bias, xbasis)
     # initialise empty arrays
     outcomes_1 = zeros(Bool, sample_no)
     outcomes_2 = zeros(Bool, sample_no)
@@ -17,7 +17,7 @@ function decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, 
         outcomes_2 = block_decode(samples_out_2, 2, block_size)
 
     elseif decode_type == "bias"
-        # decode each qubit individually
+        # decode each qubit individuallys
         samples_out_1 = naive_decode(samples_1, N_ord[1], block_size, measure[1], bias[1])
         samples_out_2 = naive_decode(samples_2, N_ord[2], block_size, measure[2], bias[2])
 
@@ -26,10 +26,13 @@ function decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, 
         outcomes_2 = block_decode(samples_out_2, 2, block_size)
 
     elseif decode_type == "ave_max_like"
-        # 
+        # take the two samples and some information about the system and
+        outcomes_1 = ave_max_like_decoder(samples_1)
+        outcomes_2 = ave_max_like_decoder(samples_2)
 
     elseif decode_type == "max_likelihood"
-
+        # Take the two samples and find the maximum likelihood
+        outcomes_1, outcomes_2 = max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis)
     end
 
     return outcomes_1, outcomes_2
@@ -52,6 +55,96 @@ function naive_decode(samples, N_ord, block_size, measure, bias)
     end
 
     return samples_out
+end
+
+function max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis, measure)
+    part = zeros(4)
+    row, col, sample_no = size(samples_1)
+
+    xbasis_1 = xbasis[1]
+    xbasis_2 = xbasis[2]
+
+    N_ord_1 = N_ord[1]
+    N_ord_2 = N_ord[2]
+
+    # prepare measurement operators
+    meas_op_1 = measurement_operator(measure[1], xbasis_1, N_ord_1)
+    meas_op_2 = measurement_operator(measure[2], xbasis_2, N_ord_2)
+    meas_ops = [meas_op_1, meas_op_2]
+
+    # outcomes for majority
+    maj_1 = zeros(length(sample_no))
+    maj_2 = zeros(length(sample_no))
+
+    # Fock space operators
+    n_b_1 = xbasis_1[3]
+    a_b_1 = xbasis_1[4]
+
+    n_b_2 = xbasis_2[3]
+    a_b_2 = xbasis_2[4]
+
+    plus_1 = tensor(xbasis_1[1], dagger(xbasis_1[1]))
+    min_1 = tensor(xbasis_1[2], dagger(xbasis_1[2]))
+
+    plus_2 = tensor(xbasis_2[1], dagger(xbasis_2[1]))
+    min_2 = tensor(xbasis_2[2], dagger(xbasis_2[2]))
+
+    # unpack error information
+    # err_info = nu_loss_1, nu_dephase_1, nu_loss_2, nu_dephase_2
+    nu_loss_1 = err_info[1]
+    nu_dephase_1 = err_info[2]
+    nu_loss_2 = err_info[3]
+    nu_dephase_2 = err_info[4]
+
+    # Loss kraus operators
+    if nu_loss_2 != 0
+        A(p1, p2) = (((1-exp(-nu_loss_1))^(p1/2)) / sqrt(factorial(big(p1))))*exp(-nu_loss*dense(n_b_1)/2)*a_b_1^p1 * exp(-1im*(p2*pi/(N_ord_1*N_ord_2))*dense(n_b_2))
+    else
+        A(p1, p2) = (((1-exp(-nu_loss_1))^(p/2)) / sqrt(factorial(big(p))))*exp(-nu_loss*dense(n_b_1)/2)*a_b_1^p
+    end
+
+    if nu_loss_1 != 0
+        B(p1, p2) = (((1-exp(-nu_loss_2))^(p1/2)) / sqrt(factorial(big(p1))))*exp(-nu_loss_2*dense(n_b_2)/2)*a_b_2^p1 * exp(-1im*(p2*pi/(N_ord_1*N_ord_2))*dense(n_b_2))
+    else
+        B(p1, p2) = (((1-exp(-nu_loss_2))^(p1/2)) / sqrt(factorial(big(p1))))*exp(-nu_loss_2*dense(n_b_2)/2)*a_b_2^p1
+    end
+
+    # find all likelihoods and choose the max
+
+    for i = collect(1:length(samples_1))
+        meas_op_mat_1 = tensor(meas_ops[1](samples_1[i]), dagger(meas_ops[1](samples_1[i])))
+        meas_op_mat_2 = tensor(meas_ops[2](samples_2[i]), dagger(meas_ops[2](samples_2[i])))
+
+        if nu_loss_1 == 0.0 && nu_loss_2 == 0.0
+            part[1] = norm(tr(meas_op_mat_1*plus_1)*tr(meas_op_mat_2*plus_2))
+            part[2] = norm(tr(meas_op_mat_1*plus_1)*tr(meas_op_mat_2*min_2))
+            part[3] = norm(tr(meas_op_mat_1*min_1)*tr(meas_op_mat_2*plus_2))
+            part[4] = norm(tr(meas_op_mat_1*min_1)*tr(meas_op_mat_2*min_2))
+        else
+            part[1] = norm(sum(tr(meas_op_mat_1*(A(j)*plus_1*dagger(A(j))))*tr(meas_op_mat_2*(B_1(j)*plus_2*dagger(B_1(j)))) for j = 0:100))
+            part[2] = norm(sum(tr(meas_op_mat_1*(A(j)*plus_1*dagger(A(j))))*tr(meas_op_mat_2*(B_1(j)*min_2*dagger(B_1(j)))) for j = 0:100))
+            part[3] = norm(sum(tr(meas_op_mat_1*(A(j)*min_1*dagger(A(j))))*tr(meas_op_mat_2*(B_1(j)*plus_2*dagger(B_1(j)))) for j = 0:100))
+            part[4] = norm(sum(tr(meas_op_mat_1*(A(j)*min_1*dagger(A(j))))*tr(meas_op_mat_2*(B_1(j)*min_2*dagger(B_1(j)))) for j = 0:100))
+        end
+
+        max_index = findmax(part)[2]
+
+        if max_index == 1
+            maj_1[i] = true
+            maj_2[i] = true
+        elseif max_index == 2
+            maj_1[i] = true
+            maj_2[i] = false
+        elseif max_index == 3
+            maj_1[i] = false
+            maj_2[i] = true
+        else
+            maj_1[i] = false
+            maj_2[i] = false
+        end
+    end
+
+    return maj_1, maj_2
 end
 
 #########################################################
@@ -120,13 +213,14 @@ function block_decode(samples_out, block_no, block_size)
             # take majority vote over all column parities
             no_pos = count(l->(l == 1), col_par)
             no_neg = count(l->(l == -1), col_par)
+            println(no_pos)
+            println(no_neg)
             if no_pos > no_neg
                 maj[k] = true
             else
                 maj[k] = false
             end
         end
-
 
     elseif block_no == 2
         # take parities of each row
@@ -166,6 +260,5 @@ function block_decode(samples_out, block_no, block_size)
             end
         end
     end
-
     return maj
 end

@@ -29,7 +29,7 @@ end
 ##################################################
 # Finds the average fidelity
 
-function fid_ave(outcomes_1, outcomes_2, P)
+function fid_ave_func(outcomes_1, outcomes_2, P)
 
     # initialise the state
     b = SpinBasis(1//2)
@@ -42,8 +42,6 @@ function fid_ave(outcomes_1, outcomes_2, P)
 
     psi_ini = (tensor(zero, zero) + tensor(one, one))/sqrt(2)
     psi_ini_dm = dm(psi_ini)
-
-    println(size(outcomes_1))
 
     row, col, sample_no = size(outcomes_1)
     fid_list = zeros(Float64, sample_no)
@@ -65,12 +63,15 @@ function fid_ave(outcomes_1, outcomes_2, P)
         psi_corr_dm = dm(psi_corr)
 
         # record fidelity
-        fid_list[k] = abs(fidelity(psi_ini_dm, psi_corr_dm))^2
+        #fid_list[k] = real(fidelity(psi_corr_dm, psi_ini_dm))^2
+        fid_list[k] = norm(dagger(psi_ini)*psi_corr*dagger(psi_corr)*psi_ini)
+
     end
 
     # calculate average fidelity
     fid_ave = sum(fid_list)/sample_no
     println("average_fid: ", fid_ave)
+    println("fid_list: ", fid_list)
     return fid_ave, fid_list
 end
 ##################################################

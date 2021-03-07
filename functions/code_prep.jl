@@ -36,20 +36,14 @@ function code_prep(N_ord, dim, alpha, code)
     return prep_state
 end
 
-function binom_prep(N_ord, dim, N)
+# find the dimensions based on alpha
+function find_dim(code, alpha, N_ord)
 
-    b = FockBasis(dim)
+    if code == "cat"
+        dim = convert(Int64, round(2*alpha^2 + alpha, digits=0))
+    elseif code == "binomial"
+        dim = (alpha+1)*(N_ord)
+    end
 
-    plus_bin = (sum(sqrt(binomial(N+1, i))*fockstate(b, (N_ord)*i) for i = 0:N+1)/(sqrt(2^(N+1))))
-    min_bin = (sum((-1)^(i)*sqrt(binomial(N+1, i))*fockstate(b, (N_ord)*i) for i = 0:N+1)/(sqrt(2^(N+1))))
-
-    zero_bin = (plus_bin + min_bin)/(sqrt(2))
-    one_bin = (plus_bin - min_bin)/(sqrt(2))
-
-    n_b = number(b)
-    a_b = destroy(b)
-
-    prep_state = [plus_bin, min_bin, n_b, a_b, zero_bin, one_bin, b, N]
-
-    return prep_state
+    return dim
 end
