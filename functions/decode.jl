@@ -213,8 +213,7 @@ function block_decode(samples_out, block_no, block_size)
             # take majority vote over all column parities
             no_pos = count(l->(l == 1), col_par)
             no_neg = count(l->(l == -1), col_par)
-            println(no_pos)
-            println(no_neg)
+
             if no_pos > no_neg
                 maj[k] = true
             else

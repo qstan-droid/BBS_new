@@ -71,7 +71,6 @@ function fid_ave_func(outcomes_1, outcomes_2, P)
     # calculate average fidelity
     fid_ave = sum(fid_list)/sample_no
     println("average_fid: ", fid_ave)
-    println("fid_list: ", fid_list)
     return fid_ave, fid_list
 end
 ##################################################

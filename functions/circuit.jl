@@ -15,6 +15,7 @@ function circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, d
     # begin code preparation
     xbasis_1 = code_prep(N_ord[1], dim[1], alpha[1], code[1])
     xbasis_2 = code_prep(N_ord[2], dim[2], alpha[2], code[2])
+    xbasis = [xbasis_1, xbasis_2]
 
     # sample errors
     # block_size = [no_rows, no_cols, no_repetitions]
@@ -60,16 +61,13 @@ function circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, d
     samples_2, norms_2, meas_exp_zero_2, meas_exp_one_2, meas_exp_zo_2, meas_exp_oz_2 = measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, 2, measure, meas_exp_1, [xbasis_1, xbasis_2], N_ord, samples_1, norms_1, code, block_size)
     meas_exp_2 = [meas_exp_zero_2, meas_exp_one_2, meas_exp_zo_2, meas_exp_oz_2]
 
+    println("pass")
+
     ###################################################################################################
     # Thus comes decoding
     # outcomes are the decoded outcomes for each block, should be an array of length(sample_no) for each
     # bias = [bias_amplitude_1, bias_amplitude_2]
     outcomes_1, outcomes_2 = decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, sample_no, decode_type, measure, bias, xbasis)
-    println("samples_1: ", samples_1)
-    println("samples_2: ", samples_2)
-
-    println("outcomes_1: ", outcomes_1)
-    println("outcomes_2: ", outcomes_2)
 
     ###################################################################################################
     # First we find the
