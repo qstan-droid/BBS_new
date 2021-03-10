@@ -12,6 +12,9 @@ function circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, d
     dim_2 = find_dim(code[2], alpha[2], N_ord[2])
     dim = [dim_1, dim_2]
 
+    println("here")
+    println(dim[1])
+    println(dim[2])
     # begin code preparation
     xbasis_1 = code_prep(N_ord[1], dim[1], alpha[1], code[1])
     xbasis_2 = code_prep(N_ord[2], dim[2], alpha[2], code[2])
@@ -27,6 +30,8 @@ function circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, d
 
     loss_2, loss_norm_2 = loss_sample(err_place[3], err_info[3], block_size[2]*block_size[3], block_size[1], xbasis_2, sample_no)
     dephase_2, dephase_norm_2 = dephase_sample(err_place[4], err_info[4], block_size[2]*block_size[3], block_size[1], sample_no)
+
+    println("here2")
 
     # propagate errors
     # we assume the brooks-preskill code
