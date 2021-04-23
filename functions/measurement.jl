@@ -93,6 +93,7 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
             u = rand(Uniform(0, ceil_constant))
 
             # check if condition is true
+            println(abs(f_x))
             if u < abs(f_x)
                 #=
                 if imag(samples[x,y,z]) < 0

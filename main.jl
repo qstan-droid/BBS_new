@@ -19,7 +19,7 @@ for i = 1:length(x)
     println("x_vary: ", x_var, " | ", "x: ", x[i], " | order: ", N_ord )
 
     if x_var == "alpha"
-        if alpha_2 == false
+        if dif_alpha == false
             ave_fid[i], fid_list_temp, samples_1_temp, samples_2_temp = circuit(code, N_ord, [x[i], x[i]], block_size, err_place, err_info, measure, decode_type, sample_no, bias)
         else
             ave_fid[i], fid_list_temp, samples_1_temp, samples_2_temp = circuit(code, N_ord, [x[i], alpha_2], block_size, err_place, err_info, measure, decode_type, sample_no, bias)
@@ -37,10 +37,11 @@ for i = 1:length(x)
     append!(fid_list, fid_list_temp)
 end
 
-ARGS = [1, "naive_1"]
+#args = [1, "naive_1"]
 
 # now we save onto a folder
-open(string("data_", ARGS[2], "/parameters.txt"), "w") do file
+open("parameters.txt", "w") do file
+#open(string("data_", ARGS[2], "/parameters.txt"), "w") do file
     write(file, string("code: ", code, "\n"))
     write(file, string("sample_no: ", sample_no, "\n"))
     write(file, string("n: ", block_size[1], "\n"))
@@ -70,11 +71,17 @@ open(string("data_", ARGS[2], "/parameters.txt"), "w") do file
 
 end
 
+<<<<<<< HEAD
 spot = 1
+=======
+
+
+spot = 4
+>>>>>>> 57b717bbe118e3e4a621c20701257942cf42be6e
 p1_plus, p1_min = samples_plot(samples_1[sample_no*(spot - 1) + 1:sample_no*spot], N_ord[1], x[spot], measure[1], bias[1])
 p2_plus, p2_min = samples_plot(samples_2[sample_no*(spot - 1) + 1:sample_no*spot], N_ord[2], alpha_2, measure[2], bias[2])
 
-writedlm(string("data_", ARGS[2], "/", ARGS[1], ".csv"), ave_fid, ',')
+#writedlm(string("data_", ARGS[2], "/", ARGS[1], ".csv"), ave_fid, ',')
 savefig(p1_plus, "samples_1_plot_plus")
 savefig(p1_min, "samples_1_plot_min")
 savefig(p2_plus, "samples_2_plot_plus")
