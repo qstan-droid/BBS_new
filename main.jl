@@ -14,6 +14,10 @@ fid_list = []
 ave_fid = zeros(Float64, length(x))
 
 for i = 1:length(x)
+
+    println("-------------------------------------")
+    println("x_vary: ", x_var, " | ", "x: ", x[i], " | order: ", N_ord )
+
     if x_var == "alpha"
         if alpha_2 == false
             ave_fid[i], fid_list_temp, samples_1_temp, samples_2_temp = circuit(code, N_ord, [x[i], x[i]], block_size, err_place, err_info, measure, decode_type, sample_no, bias)
@@ -27,8 +31,6 @@ for i = 1:length(x)
             ave_fid[i], fid_list_temp, samples_1_temp, samples_2_temp = circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, decode_type, sample_no, [0, x[i]])
         end
     end
-    println("-------------------------------------")
-    println("x_vary: ", x_var, " | ", "x: ", x[i], " | order: ", N_ord )
 
     append!(samples_1, samples_1_temp)
     append!(samples_2, samples_2_temp)
@@ -68,9 +70,7 @@ open(string("data_", ARGS[2], "/parameters.txt"), "w") do file
 
 end
 
-
-
-spot = 6
+spot = 1
 p1_plus, p1_min = samples_plot(samples_1[sample_no*(spot - 1) + 1:sample_no*spot], N_ord[1], x[spot], measure[1], bias[1])
 p2_plus, p2_min = samples_plot(samples_2[sample_no*(spot - 1) + 1:sample_no*spot], N_ord[2], alpha_2, measure[2], bias[2])
 

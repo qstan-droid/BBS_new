@@ -73,7 +73,7 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
 
     # find the envelope constant function
     # ceil_constant = find_max_dist(block_size, block_no, measure_type, meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, code, loc)*1.1
-    ceil_constant = 1
+    ceil_constant = 0.15
     counter = false
 
     # unpack loc
@@ -94,6 +94,15 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
 
             # check if condition is true
             if u < abs(f_x)
+                #=
+                if imag(samples[x,y,z]) < 0
+                    println("negative samples: ", samples[x, y, z])
+                    println("negative amplitude: ", abs(f_x))
+                elseif imag(samples[x, y, z]) > 0
+                    println("positive samples: ", samples[x, y, z])
+                    println("positive amplitude: ", abs(f_x))
+                end
+                =#
                 counter = true
             end
         end
@@ -224,123 +233,54 @@ function pdf_1(meas_exp_1, err_exp_1, err_exp_2, norms, loc, block_size)
     no_col = block_size[2]
     rep = block_size[3]
 
-    err_exp_1_plus = err_exp_1[1][:, :, loc[3]]
-    err_exp_1_min = err_exp_1[2][:, :, loc[3]]
-    err_exp_1_pm = err_exp_1[3][:, :, loc[3]]
-    err_exp_1_mp = err_exp_1[4][:, :, loc[3]]
+    err_exp_1_zero = err_exp_1[1][:, :, loc[3]]
+    err_exp_1_one = err_exp_1[2][:, :, loc[3]]
+    err_exp_1_zo = err_exp_1[3][:, :, loc[3]]
+    err_exp_1_oz = err_exp_1[4][:, :, loc[3]]
 
     err_exp_2_zero = err_exp_2[1][:, :, loc[3]]
     err_exp_2_one = err_exp_2[2][:, :, loc[3]]
     err_exp_2_zo = err_exp_2[3][:, :, loc[3]]
     err_exp_2_oz = err_exp_2[4][:, :, loc[3]]
 
-    meas_exp_1_plus = meas_exp_1[1][:, :, loc[3]]
-    meas_exp_1_min = meas_exp_1[2][:, :, loc[3]]
-    meas_exp_1_pm = meas_exp_1[3][:, :, loc[3]]
-    meas_exp_1_mp = meas_exp_1[4][:, :, loc[3]]
+    meas_exp_1_zero = meas_exp_1[1][:, :, loc[3]]
+    meas_exp_1_one = meas_exp_1[2][:, :, loc[3]]
+    meas_exp_1_zo = meas_exp_1[3][:, :, loc[3]]
+    meas_exp_1_oz = meas_exp_1[4][:, :, loc[3]]
 
     norms = norms[:, :, loc[3]]
+    x = loc[1]
+    y = loc[2]
+    z = loc[3]
 
     ### pdf begins ###
-    # the constant factor
-    B_plus = prod(prod(err_exp_2_zero[i, j] for j = 1:no_col) + prod(err_exp_2_one[i, j] for j = 1:no_col) + prod(err_exp_2_zo[i, j] for j = 1:no_col) + prod(err_exp_2_oz[i, j] for j = 1:no_col) for i = 1:no_row*rep)/(2^(no_row*rep))
-    B_min = prod(prod(err_exp_2_zero[i, j] for j = 1:no_col) + prod(err_exp_2_one[i, j] for j = 1:no_col) - prod(err_exp_2_zo[i, j] for j = 1:no_col) - prod(err_exp_2_oz[i, j] for j = 1:no_col) for i = 1:no_row*rep)/(2^(no_row*rep))
-    B = B_plus + B_min
+    ### B_factor ###
+    B_plus = prod(prod(prod(err_exp_2_zero[i, (p-1)*no_col + j] for j = 1:no_col) + prod(err_exp_2_zo[i, (p-1)*no_col + j] for j = 1:no_col) + prod(err_exp_2_oz[i, (p-1)*no_col + j] for j = 1:no_col) + prod(err_exp_2_one[i, (p-1)*no_col + j] for j = 1:no_col) for p = 1:rep) for i = 1:no_row)/(2^(rep*no_row))
+    B_min = prod(prod(prod(err_exp_2_zero[i, (p-1)*no_col + j] for j = 1:no_col) - prod(err_exp_2_zo[i, (p-1)*no_col + j] for j = 1:no_col) - prod(err_exp_2_oz[i, (p-1)*no_col + j] for j = 1:no_col) + prod(err_exp_2_one[i, (p-1)*no_col + j] for j = 1:no_col) for p = 1:rep) for i = 1:no_row)/(2^(rep*no_row))
 
-    # the variable factor
-    lom = [0 0 0; 1 0 1; 0 1 1; 1 1 0] # location of minuses
-    A = zeros(Complex{Float64}, 4)
+    B_fac = B_plus + B_min
 
-    for a = 1:4
-        if no_row == 1
-            Before = 1
-            After = 1
-            if block_size[2] == 1
-                Current = meas_exp_1_plus[loc[1], loc[2]] +
-                            (-1)^lom[a, 1]*meas_exp_1_pm[loc[1], loc[2]] +
-                            (-1)^lom[a, 2]*meas_exp_1_mp[loc[1], loc[2]] +
-                            (-1)^lom[a, 3]*meas_exp_1_min[loc[1], loc[2]]
-            else
-                if loc[2] == no_col
-                    Current = (prod(meas_exp_1_plus[loc[1], j] for j = 1:no_col) +
-                                (-1)^lom[a, 1]*prod(meas_exp_1_pm[loc[1], j] for j = 1:no_col) +
-                                (-1)^lom[a, 2]*prod(meas_exp_1_mp[loc[1], j] for j = 1:no_col) +
-                                (-1)^lom[a, 3]*prod(meas_exp_1_min[loc[1], j] for j = 1:no_col))
-                else
-                    Current = (prod(meas_exp_1_plus[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_plus[loc[1], j] for j = (loc[2] + 1):no_col) +
-                                (-1)^lom[a, 1]*prod(meas_exp_1_pm[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_pm[loc[1], j] for j = (loc[2] + 1):no_col) +
-                                (-1)^lom[a, 2]*prod(meas_exp_1_mp[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_mp[loc[1], j] for j = (loc[2] + 1):no_col) +
-                                (-1)^lom[a, 3]*prod(meas_exp_1_min[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_min[loc[1], j] for j = (loc[2] + 1):no_col))
-                end
-            end
-        elseif loc[1] == 1
-            Before = 1
-            if loc[2] == no_col
-                Current = (prod(meas_exp_1_plus[loc[1], j] for j = 1:no_col) +
-                            (-1)^lom[a, 1]*prod(meas_exp_1_pm[loc[1], j] for j = 1:no_col) +
-                            (-1)^lom[a, 2]*prod(meas_exp_1_mp[loc[1], j] for j = 1:no_col)+
-                            (-1)^lom[a, 3]*prod(meas_exp_1_min[loc[1], j] for j = 1:no_col))
-            else
-                Current = (prod(meas_exp_1_plus[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_plus[loc[1], j] for j = (loc[2] + 1):no_col) +
-                            (-1)^lom[a, 1]*prod(meas_exp_1_pm[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_pm[loc[1], j] for j = (loc[2] + 1):no_col) +
-                            (-1)^lom[a, 2]*prod(meas_exp_1_mp[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_mp[loc[1], j] for j = (loc[2] + 1):no_col) +
-                            (-1)^lom[a, 3]*prod(meas_exp_1_min[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_min[loc[1], j] for j = (loc[2] + 1):no_col))
-            end
-            After = prod(prod(err_exp_1_plus[i, j] for j = 1:no_col) +
-                    (-1)^lom[a, 1]*prod(err_exp_1_pm[i, j] for j = 1:no_col) +
-                    (-1)^lom[a, 2]*prod(err_exp_1_mp[i, j] for j = 1:no_col) +
-                    (-1)^lom[a, 3]*prod(err_exp_1_min[i, j] for j = 1:no_col) for i = (loc[1]+1):no_row)
-        elseif loc[1] == no_row
-            Before = prod(prod(meas_exp_1_plus[i, j] for j = 1:no_col) +
-                        (-1)^lom[a, 1]*prod(meas_exp_1_pm[i, j] for j = 1:no_col) +
-                        (-1)^lom[a, 2]*prod(meas_exp_1_mp[i, j] for j = 1:no_col) +
-                        (-1)^lom[a, 3]*prod(meas_exp_1_min[i, j] for j = 1:no_col) for i = 1:(loc[1]-1))
-            if loc[2] == no_col
-                Current = (prod(meas_exp_1_plus[loc[1], j] for j = 1:no_col) +
-                            (-1)^lom[a, 1]*prod(meas_exp_1_pm[loc[1], j] for j = 1:no_col) +
-                            (-1)^lom[a, 2]*prod(meas_exp_1_mp[loc[1], j] for j = 1:no_col) +
-                            (-1)^lom[a, 3]*prod(meas_exp_1_min[loc[1], j] for j = 1:no_col))
-            else
-                Current = (prod(meas_exp_1_plus[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col) +
-                            (-1)^lom[a, 1]*prod(meas_exp_1_pm[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col) +
-                            (-1)^lom[a, 2]*prod(meas_exp_1_mp[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col) +
-                            (-1)^lom[a, 3]*prod(meas_exp_1_min[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col))
-            end
-            After = 1
-        else
-            Before = prod(prod(meas_exp_1_plus[i, j] for j = 1:no_col) +
-                        (-1)^lom[a, 1]*prod(meas_exp_1_pm[i, j] for j = 1:no_col) +
-                        (-1)^lom[a, 2]*prod(meas_exp_1_mp[i, j] for j = 1:no_col) +
-                        (-1)^lom[a, 3]*prod(meas_exp_1_min[i, j] for j = 1:no_col) for i = 1:(loc[1]-1))
-            if loc[2] == no_col
-                Current = (prod(meas_exp_1_plus[loc[1], j] for j = 1:no_col) +
-                            (-1)^lom[a, 1]*prod(meas_exp_1_pm[loc[1], j] for j = 1:no_col) +
-                            (-1)^lom[a, 2]*prod(meas_exp_1_mp[loc[1], j] for j = 1:no_col) +
-                            (-1)^lom[a, 3]*prod(meas_exp_1_min[loc[1], j] for j = 1:no_col))
-            else
-                Current = (prod(meas_exp_1_plus[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col) +
-                            (-1)^lom[a, 1]*prod(meas_exp_1_pm[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col) +
-                            (-1)^lom[a, 2]*prod(meas_exp_1_mp[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col) +
-                            (-1)^lom[a, 3]*prod(meas_exp_1_min[loc[1], j] for j = 1:loc[2])*prod(err_exp_1_plus[loc[1], j] for j = (loc[2]+1):no_col))
-            end
-            After = prod(prod(err_exp_1_plus[i, j] for j = 1:no_col) +
-                    (-1)^lom[a, 1]*prod(err_exp_1_pm[i, j] for j = 1:no_col) +
-                    (-1)^lom[a, 2]*prod(err_exp_1_mp[i, j] for j = 1:no_col) +
-                    (-1)^lom[a, 3]*prod(err_exp_1_min[i, j] for j = 1:no_col) for i = (loc[1]+1):no_row)
-        end
+    ### A_factor ###
+    A_plus = prod(prod(meas_exp_1_zero[i, j] for i = 1:no_row; init=1) + prod(meas_exp_1_zo[i, j] for i = 1:no_row; init=1) + prod(meas_exp_1_oz[i, j] for i = 1:no_row; init=1) + prod(meas_exp_1_one[i, j] for i = 1:no_row; init=1) for j = 1:y - 1; init=1)*
+                (prod(meas_exp_1_zero[i, y] for i = 1:x; init=1)*prod(err_exp_1_zero[i, y] for i = x+1:no_row; init=1) + prod(meas_exp_1_zo[i, y] for i = 1:x; init=1)*prod(err_exp_1_zo[i, y] for i = x+1:no_row; init=1) + prod(meas_exp_1_oz[i, y] for i = 1:x; init=1)*prod(err_exp_1_oz[i, y] for i = x+1:no_row; init=1) + prod(meas_exp_1_one[i, y] for i = 1:x; init=1)*prod(err_exp_1_one[i, y] for i = x+1:no_row; init=1))*
+                prod(prod(err_exp_1_zero[i, j] for i = 1:no_row; init=1) + prod(err_exp_1_zo[i, j] for i = 1:no_row; init=1) + prod(err_exp_1_oz[i, j] for i = 1:no_row; init=1) + prod(err_exp_1_one[i, j] for i = 1:no_row; init=1) for j = y+1:no_col; init=1)/(2^no_col)
+    A_min = prod(prod(meas_exp_1_zero[i, j] for i = 1:no_row; init=1) - prod(meas_exp_1_zo[i, j] for i = 1:no_row; init=1) - prod(meas_exp_1_oz[i, j] for i = 1:no_row; init=1) + prod(meas_exp_1_one[i, j] for i = 1:no_row; init=1) for j = 1:y - 1; init=1)*
+                (prod(meas_exp_1_zero[i, y] for i = 1:x; init=1)*prod(err_exp_1_zero[i, y] for i = x+1:no_row; init=1) - prod(meas_exp_1_zo[i, y] for i = 1:x; init=1)*prod(err_exp_1_zo[i, y] for i = x+1:no_row; init=1) - prod(meas_exp_1_oz[i, y] for i = 1:x; init=1)*prod(err_exp_1_oz[i, y] for i = x+1:no_row; init=1) + prod(meas_exp_1_one[i, y] for i = 1:x; init=1)*prod(err_exp_1_one[i, y] for i = x+1:no_row; init=1))*
+                prod(prod(err_exp_1_zero[i, j] for i = 1:no_row; init=1) - prod(err_exp_1_zo[i, j] for i = 1:no_row; init=1) - prod(err_exp_1_oz[i, j] for i = 1:no_row; init=1) + prod(err_exp_1_one[i, j] for i = 1:no_row; init=1) for j = y+1:no_col; init=1)/(2^no_col)
 
-        A[a] = Before*Current*After
-    end
+    A_fac = A_plus + A_min
 
-    # product of all norm
+    ### norms ###
+    # get product of all block 1 norms
     current_norm = 1
-    for i = 1:loc[1]
-        for j = 1:loc[2]
+    for i = 1:no_row
+        for j = 1:no_col
             current_norm = current_norm*norms[i, j]
         end
     end
 
-    ans = B*sum(A[i] for i = 1:4)/(2^(no_row+1) * 4)
+    ### answer ###
+    ans = A_fac*B_fac/(4*current_norm)
     return ans
 end
 
@@ -351,16 +291,24 @@ function pdf_2(meas_exp_1, meas_exp_2, err_exp_2, norms, norms_1, loc, block_siz
     no_col = block_size[2]
     rep = block_size[3]
 
+    # location of current qubit
+    x = loc[1] # row number
+    y = loc[2] # col number
+    z = loc[3]
+
+    rho = Int(ceil(y/no_col)) # repetition number
+    y_tru = Int(y - (rho - 1)*no_col) # row number in the repetition
+
     err_exp_2_zero = err_exp_2[1][:, :, loc[3]]
     err_exp_2_one = err_exp_2[2][:, :, loc[3]]
     err_exp_2_zo = err_exp_2[3][:, :, loc[3]]
     err_exp_2_oz = err_exp_2[4][:, :, loc[3]]
 
     # measurement expectation values
-    meas_exp_1_plus = meas_exp_1[1][:, :, loc[3]]
-    meas_exp_1_min = meas_exp_1[2][:, :, loc[3]]
-    meas_exp_1_pm = meas_exp_1[3][:, :, loc[3]]
-    meas_exp_1_mp = meas_exp_1[4][:, :, loc[3]]
+    meas_exp_1_zero = meas_exp_1[1][:, :, loc[3]]
+    meas_exp_1_one = meas_exp_1[2][:, :, loc[3]]
+    meas_exp_1_zo = meas_exp_1[3][:, :, loc[3]]
+    meas_exp_1_oz = meas_exp_1[4][:, :, loc[3]]
 
     meas_exp_2_zero = meas_exp_2[1][:, :, loc[3]]
     meas_exp_2_one = meas_exp_2[2][:, :, loc[3]]
@@ -371,18 +319,27 @@ function pdf_2(meas_exp_1, meas_exp_2, err_exp_2, norms, norms_1, loc, block_siz
     norms_1 = norms_1[:, :, loc[3]]
 
     ### pdf begins ###
-    # the constant
-    lom = [0 0 0; 1 0 1; 0 1 1; 1 1 0] # location of minuses
-    A = zeros(Complex{Float64}, 4)
+    ### A_factor ###
+    A_plus = prod(prod(meas_exp_1_zero[i, j] for i = 1:no_row) + prod(meas_exp_1_zo[i, j] for i = 1:no_row) + prod(meas_exp_1_oz[i, j] for i = 1:no_row) + prod(meas_exp_1_one[i, j] for i = 1:no_row) for j = 1:no_col)/(2^no_col)
+    A_min = prod(prod(meas_exp_1_zero[i, j] for i = 1:no_row) - prod(meas_exp_1_zo[i, j] for i = 1:no_row) - prod(meas_exp_1_oz[i, j] for i = 1:no_row) + prod(meas_exp_1_one[i, j] for i = 1:no_row) for j = 1:no_col)/(2^no_col)
 
-    for a = 1:4
-        A[a] = prod(prod(meas_exp_1_plus[i, j] for j = 1:no_col) +
-                (-1)^lom[a, 1]*prod(meas_exp_1_pm[i, j] for j = 1:no_col) +
-                (-1)^lom[a, 2]*prod(meas_exp_1_mp[i, j] for j = 1:no_col) +
-                (-1)^lom[a, 3]*prod(meas_exp_1_min[i, j] for j = 1:no_col) for i = 1:no_row)
-    end
+    A_fac = A_plus + A_min
 
-    # get product of all block 1 norms
+    ### B_factor ###
+    B_plus = prod(prod(prod(meas_exp_2_zero[i, (p-1)*no_col + j] for j = 1:no_col; init=1) + prod(meas_exp_2_zo[i, (p-1)*no_col + j] for j = 1:no_col; init=1) + prod(meas_exp_2_oz[i, (p-1)*no_col + j] for j = 1:no_col; init=1) + prod(meas_exp_2_one[i, (p-1)*no_col + j] for j = 1:no_col; init=1) for p = 1:rep; init=1) for i = 1:x-1; init=1)*
+                prod(prod(meas_exp_2_zero[x, (p-1)*no_col + j] for j = 1:no_col; init=1) + prod(meas_exp_2_zo[x, (p-1)*no_col + j] for j = 1:no_col; init=1) + prod(meas_exp_2_oz[x, (p-1)*no_col + j] for j = 1:no_col; init=1) + prod(meas_exp_2_one[x, (p-1)*no_col + j] for j = 1:no_col; init=1) for p = 1:rho-1; init=1)*
+                (prod(meas_exp_2_zero[x, (rho-1)*no_col + j] for j = 1:y_tru; init=1)*prod(err_exp_2_zero[x, (rho-1)*no_col + j] for j = y_tru + 1:no_col; init=1) + prod(meas_exp_2_zo[x, (rho-1)*no_col + j] for j = 1:y_tru; init=1)*prod(err_exp_2_zo[x, (rho-1)*no_col + j] for j = y_tru + 1:no_col; init=1) + prod(meas_exp_2_oz[x, (rho-1)*no_col + j] for j = 1:y_tru; init=1)*prod(err_exp_2_oz[x, (rho-1)*no_col + j] for j = y_tru + 1:no_col; init=1) + prod(meas_exp_2_one[x, (rho-1)*no_col + j] for j = 1:y_tru; init=1)*prod(err_exp_2_zero[x, (rho-1)*no_col + j] for j = y_tru+1:no_col; init=1))*
+                prod(prod(err_exp_2_zero[x, (p-1)*no_col+j] for j = 1:no_col; init=1) + prod(err_exp_2_zo[x, (p-1)*no_col + j] for j = 1:no_col; init=1) + prod(err_exp_2_oz[x, (p-1)*no_col + j] for j = 1:no_col; init=1) + prod(err_exp_2_one[x, (p-1)*no_col + j] for j = 1:no_col; init=1) for p = rho + 1:rep; init=1)*
+                prod(prod(prod(err_exp_2_zero[i, (p-1)*no_col+j] for j = 1:no_col; init=1) + prod(err_exp_2_zo[i, (p-1)*no_col+j] for j = 1:no_col; init=1) + prod(err_exp_2_oz[i, (p-1)*no_col+j] for j = 1:no_col; init=1) + prod(err_exp_2_one[i, (p-1)*no_col+j] for j = 1:no_col; init=1) for p = 1:rep; init=1) for i = x+1:no_row; init=1)/(2^(no_row*rep))
+    B_min = prod(prod(prod(meas_exp_2_zero[i, (p-1)*no_col + j] for j = 1:no_col; init=1) - prod(meas_exp_2_zo[i, (p-1)*no_col + j] for j = 1:no_col; init=1) - prod(meas_exp_2_oz[i, (p-1)*no_col + j] for j = 1:no_col; init=1) + prod(meas_exp_2_one[i, (p-1)*no_col + j] for j = 1:no_col; init=1) for p = 1:rep; init=1) for i = 1:x-1; init=1)*
+                prod(prod(meas_exp_2_zero[x, (p-1)*no_col + j] for j = 1:no_col; init=1) - prod(meas_exp_2_zo[x, (p-1)*no_col + j] for j = 1:no_col; init=1) - prod(meas_exp_2_oz[x, (p-1)*no_col + j] for j = 1:no_col; init=1) + prod(meas_exp_2_one[x, (p-1)*no_col + j] for j = 1:no_col; init=1) for p = 1:rho-1; init=1)*
+                (prod(meas_exp_2_zero[x, (rho-1)*no_col + j] for j = 1:y_tru; init=1)*prod(err_exp_2_zero[x, (rho-1)*no_col + j] for j = y_tru + 1:no_col; init=1) - prod(meas_exp_2_zo[x, (rho-1)*no_col + j] for j = 1:y_tru; init=1)*prod(err_exp_2_zo[x, (rho-1)*no_col + j] for j = y_tru + 1:no_col; init=1) - prod(meas_exp_2_oz[x, (rho-1)*no_col + j] for j = 1:y_tru; init=1)*prod(err_exp_2_oz[x, (rho-1)*no_col + j] for j = y_tru + 1:no_col; init=1) + prod(meas_exp_2_one[x, (rho-1)*no_col + j] for j = 1:y_tru; init=1)*prod(err_exp_2_zero[x, (rho-1)*no_col + j] for j = y_tru+1:no_col; init=1))*
+                prod(prod(err_exp_2_zero[x, (p-1)*no_col+j] for j = 1:no_col; init=1) - prod(err_exp_2_zo[x, (p-1)*no_col + j] for j = 1:no_col; init=1) - prod(err_exp_2_oz[x, (p-1)*no_col + j] for j = 1:no_col; init=1) + prod(err_exp_2_one[x, (p-1)*no_col + j] for j = 1:no_col; init=1) for p = rho + 1:rep; init=1)*
+                prod(prod(prod(err_exp_2_zero[i, (p-1)*no_col+j] for j = 1:no_col; init=1) - prod(err_exp_2_zo[i, (p-1)*no_col+j] for j = 1:no_col; init=1) - prod(err_exp_2_oz[i, (p-1)*no_col+j] for j = 1:no_col; init=1) + prod(err_exp_2_one[i, (p-1)*no_col+j] for j = 1:no_col; init=1) for p = 1:rep; init=1) for i = x+1:no_row; init=1)/(2^(no_row*rep))
+
+    B_fac = B_plus + B_min
+
+    ### norms ###
     current_norm_1 = 1
     for i = 1:no_row
         for j = 1:no_col
@@ -390,107 +347,14 @@ function pdf_2(meas_exp_1, meas_exp_2, err_exp_2, norms, norms_1, loc, block_siz
         end
     end
 
-    A = sum(A[i] for i = 1:4)/(2^(no_row + 1) * current_norm_1)
-
-    # the variable factor
-    B = zeros(Complex{Float64}, 2)
-    lom2 = [0 0 0; 1 1 0]
-
-    for b = 1:2
-        if no_row*rep == 1
-            Before = 1
-            After = 1
-            if no_col == 1
-                Current = meas_exp_2_zero[loc[1], loc[2]] +
-                            (-1)^lom2[b, 1]*meas_exp_2_zo[loc[1], loc[2]] +
-                            (-1)^lom2[b, 2]*meas_exp_2_oz[loc[1], loc[2]] +
-                            (-1)^lom2[b, 3]*meas_exp_2_one[loc[1], loc[2]]
-            else
-                if loc[2] == no_col
-                    Current = prod(meas_exp_2_zero[loc[1], j] for j = 1:no_col) +
-                                (-1)^lom2[b, 1]*prod(meas_exp_2_zo[loc[1], j] for j = 1:no_col) +
-                                (-1)^lom2[b, 2]*prod(meas_exp_2_oz[loc[1], j] for j = 1:no_col) +
-                                (-1)^lom2[b, 3]*prod(meas_exp_2_one[loc[1], j] for j = 1:no_col)
-                else
-                    Current = prod(meas_exp_2_zero[loc[1], j] for j = 1:loc[2])*prod(err_exp_2_zero[loc[1], j] for j = loc[2]+1:no_col) +
-                                (-1)^lom2[b, 1]*prod(meas_exp_2_zo[loc[1], j] for j = 1:no_col)*prod(err_exp_2_zo[loc[1], j] for j = loc[2]+1:no_col) +
-                                (-1)^lom2[b, 2]*prod(meas_exp_2_oz[loc[1], j] for j = 1:no_col)*prod(err_exp_2_oz[loc[1], j] for j = loc[2]+1:no_col) +
-                                (-1)^lom2[b, 3]*prod(meas_exp_2_one[loc[1], j] for j = 1:no_col)*prod(err_exp_2_one[loc[1], j] for j = loc[2]+1:no_col)
-                end
-            end
-        elseif loc[1] == 1
-            Before = 1
-            if loc[2] == no_col
-                Current = (prod(meas_exp_2_zero[loc[1], j] for j = 1:no_col) +
-                            (-1)^lom2[b, 1]*prod(meas_exp_2_zo[loc[1], j] for j = 1:no_col) +
-                            (-1)^lom2[b, 2]*prod(meas_exp_2_oz[loc[1], j] for j = 1:no_col) +
-                            (-1)^lom2[b, 3]*prod(meas_exp_2_one[loc[1], j] for j = 1:no_col))
-            else
-                Current = (prod(meas_exp_2_zero[loc[1], j] for j = 1:loc[2])*prod(err_exp_2_zero[loc[1], j] for j = loc[2]+1:no_col) +
-                            (-1)^lom2[b, 1]*prod(meas_exp_2_zo[loc[1], j] for j = 1:loc[2])*prod(err_exp_2_zo[loc[1], j] for j = loc[2]+1:no_col) +
-                            (-1)^lom2[b, 2]*prod(meas_exp_2_oz[loc[1], j] for j = 1:loc[2])*prod(err_exp_2_oz[loc[1], j] for j = loc[2]+1:no_col) +
-                            (-1)^lom2[b, 3]*prod(meas_exp_2_one[loc[1], j] for j = 1:loc[2])*prod(err_exp_2_one[loc[1], j] for j = loc[2]+1:no_col))
-            end
-            After = prod(prod(err_exp_2_zero[i, j] for j = 1:no_col) +
-                        (-1)^lom2[b, 1]*prod(err_exp_2_zo[i, j] for j = 1:no_col) +
-                        (-1)^lom2[b, 2]*prod(err_exp_2_oz[i, j] for j = 1:no_col) +
-                        (-1)^lom2[b, 3]*prod(err_exp_2_one[i, j] for j = 1:no_col) for i = (loc[1] + 1):no_row*rep)
-        elseif loc[1] == no_row
-            Before = prod(prod(meas_exp_2_zero[i, j] for j = 1:no_col) +
-                        (-1)^lom2[b, 1]*prod(meas_exp_2_zo[i, j] for j = 1:no_col) +
-                        (-1)^lom2[b, 2]*prod(meas_exp_2_oz[i, j] for j = 1:no_col) +
-                        (-1)^lom2[b, 3]*prod(meas_exp_2_one[i, j] for j = 1:no_col) for i = 1:(loc[1]-1))
-            if loc[2] == no_col
-                Current = (prod(meas_exp_2_zero[loc[1], j] for j = 1:no_col) +
-                            (-1)^lom2[b, 1]*prod(meas_exp_2_zo[loc[1], j] for j = 1:no_col) +
-                            (-1)^lom2[b, 2]*prod(meas_exp_2_oz[loc[1], j] for j = 1:no_col) +
-                            (-1)^lom2[b, 3]*prod(meas_exp_2_one[loc[1], j] for j = 1:no_col))
-            else
-                Current = prod(meas_exp_2_zero[loc[1], j] for j = 1:loc[2])*prod(err_exp_2_zero[loc[1], j] for j = (loc[2]+1):no_col) +
-                            (-1)^lom2[b, 1]*prod(meas_exp_2_zo[loc[1], j] for j = 1:loc[2])*prod(err_exp_2_zo[loc[1], j] for j = (loc[2]+1):no_col) +
-                            (-1)^lom2[b, 2]*prod(meas_exp_2_oz[loc[1], j] for j = 1:loc[2])*prod(err_exp_2_oz[loc[1], j] for j = (loc[2]+1):no_col) +
-                            (-1)^lom2[b, 3]*prod(meas_exp_2_one[loc[1], j] for j = 1:loc[2])*prod(err_exp_2_one[loc[1], j] for j = (loc[2]+1):no_col)
-            end
-
-
-            After = 1
-        else
-            Before = prod(prod(meas_exp_2_zero[i, j] for j = 1:no_col) +
-                        (-1)^lom2[b, 1]*prod(meas_exp_2_zo[i, j] for j = 1:no_col) +
-                        (-1)^lom2[b, 2]*prod(meas_exp_2_oz[i, j] for j = 1:no_col) +
-                        (-1)^lom2[b, 3]*prod(meas_exp_2_one[i, j] for j = 1:no_col) for i = 1:(loc[1]-1))
-
-            if loc[2] == no_col
-                Current = (prod(meas_exp_2_zero[loc[1], j] for j = 1:no_col) +
-                            (-1)^lom2[b, 1]*prod(meas_exp_2_zo[loc[1], j] for j = 1:no_col) +
-                            (-1)^lom2[b, 2]*prod(meas_exp_2_oz[loc[1], j] for j = 1:no_col) +
-                            (-1)^lom2[b, 3]*prod(meas_exp_2_one[loc[1], j] for j = 1:no_col))
-            else
-                Current = (prod(meas_exp_2_zero[loc[1], j] for j = 1:loc[2])*prod(err_exp_2_zero[loc[1], j] for j = (loc[2]+1):no_col) +
-                            (-1)^lom2[b, 1]*prod(meas_exp_2_zo[loc[1], j] for j = 1:loc[2])*prod(err_exp_2_zo[loc[1], j] for j = (loc[2]+1):no_col) +
-                            (-1)^lom2[b, 2]*prod(meas_exp_2_oz[loc[1], j] for j = 1:loc[2])*prod(err_exp_2_oz[loc[1], j] for j = (loc[2]+1):no_col) +
-                            (-1)^lom2[b, 3]*prod(meas_exp_2_one[loc[1], j] for j = 1:loc[2])*prod(err_exp_2_one[loc[1], j] for j = (loc[2]+1):no_col))
-            end
-
-            After = prod(prod(err_exp_2_zero[i, j] for j = 1:no_col) +
-                    (-1)^lom2[b, 1]*prod(err_exp_2_zo[i, j] for j = 1:no_col) +
-                    (-1)^lom2[b, 2]*prod(err_exp_2_oz[i, j] for j = 1:no_col) +
-                    (-1)^lom2[b, 3]*prod(err_exp_2_one[i, j] for j = 1:no_col) for i = (loc[1]+1):no_row)
-
-        end
-
-        B[b] = Before*Current*After
-    end
-
-    # get product of all block 2 norms
-    current_norm_2 = 1
-    for i = 1:loc[1]
-        for j = 1:loc[2]
-            current_norm_2 = current_norm_2*norms[i, j]
+    current_norm = 1
+    for i = 1:no_row
+        for j = 1:no_col*rep
+            current_norm = current_norm*norms[i, j]
         end
     end
 
-
-    ans = A*sum(B[i] for i = 1:2)/(2^(no_row) * 4 * current_norm_2)
+    ### answer ###
+    ans = A_fac*B_fac/(4*current_norm_1*current_norm)
     return ans
 end

@@ -38,16 +38,16 @@ function circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, d
     # First we pre-prepare the measurements to make it faster
     # first define the Krause operator for error
 
-    err_prep_1_plus, err_prep_1_min = error_prep(loss_1, dephase_1, err_info[1], xbasis_1, 1)
+    err_prep_1_zero, err_prep_1_one = error_prep(loss_1, dephase_1, err_info[1], xbasis_1, 2)
     err_prep_2_zero, err_prep_2_one = error_prep(loss_2, dephase_2, err_info[3], xbasis_2, 2)
 
-    err_prep_1 = [err_prep_1_plus, err_prep_1_min]
+    err_prep_1 = [err_prep_1_zero, err_prep_1_one]
     err_prep_2 = [err_prep_2_zero, err_prep_2_one]
 
-    err_exp_1_plus, err_exp_1_min, err_exp_1_pm, err_exp_1_mp = error_exp(err_prep_1_plus, err_prep_1_min)
+    err_exp_1_zero, err_exp_1_one, err_exp_1_zo, err_exp_1_oz = error_exp(err_prep_1_zero, err_prep_1_one)
     err_exp_2_zero, err_exp_2_one, err_exp_2_zo, err_exp_2_oz = error_exp(err_prep_2_zero, err_prep_2_one)
 
-    err_exp_1 = [err_exp_1_plus, err_exp_1_min, err_exp_1_pm, err_exp_1_mp]
+    err_exp_1 = [err_exp_1_zero, err_exp_1_one, err_exp_1_zo, err_exp_1_oz]
     err_exp_2 = [err_exp_2_zero, err_exp_2_one, err_exp_2_zo, err_exp_2_oz]
 
     ###################################################################################################
@@ -61,8 +61,6 @@ function circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, d
     samples_2, norms_2, meas_exp_zero_2, meas_exp_one_2, meas_exp_zo_2, meas_exp_oz_2 = measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, 2, measure, meas_exp_1, [xbasis_1, xbasis_2], N_ord, samples_1, norms_1, code, block_size)
     meas_exp_2 = [meas_exp_zero_2, meas_exp_one_2, meas_exp_zo_2, meas_exp_oz_2]
 
-    println("pass")
-
     ###################################################################################################
     # Thus comes decoding
     # outcomes are the decoded outcomes for each block, should be an array of length(sample_no) for each
@@ -73,7 +71,6 @@ function circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, d
     # First we find the
     P = find_coeff(meas_exp_1, meas_exp_2, block_size)
     ave_fidelity, fid_list = fid_ave_func(outcomes_1, outcomes_2, P)
-
 
     return ave_fidelity, fid_list, samples_1, samples_2
 end

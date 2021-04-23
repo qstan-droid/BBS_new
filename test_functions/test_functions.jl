@@ -23,8 +23,6 @@ function samples_plot(samples, N_ord, alpha, meas_type, bias)
 
     end
 
-
-
     p_plus = scatter(x_plus, y_plus, xlim = (-alpha-3, alpha+3), ylim = (-alpha-3, alpha+3))
     p_min = scatter(x_min, y_min, xlim = (-alpha-3, alpha+3), ylim = (-alpha-3, alpha+3))
 
