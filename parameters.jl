@@ -6,13 +6,8 @@ measure = ["heterodyne", "heterodyne"]
 
 # note the invariable parameters of code
 code = ["cat", "cat"]
-<<<<<<< HEAD
 block_size = [1, 1, 1]
 N_ord = [1, 1]
-=======
-block_size = [1, 3, 1]
-N_ord = [3, 1]
->>>>>>> 57b717bbe118e3e4a621c20701257942cf42be6e
 
 # define what errors are, how strong and where they're applied
 err_place = [false, false, false, false]
@@ -24,15 +19,9 @@ x_var = "alpha"
 if x_var == "alpha"
     bias = [0, 0]
 
-<<<<<<< HEAD
     x_min = 2
     x_step = 0.1
     x_max = 2.5
-=======
-    x_min = 0.2
-    x_step = 0.4
-    x_max = 2.0
->>>>>>> 57b717bbe118e3e4a621c20701257942cf42be6e
 
     x = x_min:x_step:x_max
     # same alpha for both blocks

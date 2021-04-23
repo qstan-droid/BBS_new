@@ -71,13 +71,9 @@ open("parameters.txt", "w") do file
 
 end
 
-<<<<<<< HEAD
-spot = 1
-=======
 
 
 spot = 4
->>>>>>> 57b717bbe118e3e4a621c20701257942cf42be6e
 p1_plus, p1_min = samples_plot(samples_1[sample_no*(spot - 1) + 1:sample_no*spot], N_ord[1], x[spot], measure[1], bias[1])
 p2_plus, p2_min = samples_plot(samples_2[sample_no*(spot - 1) + 1:sample_no*spot], N_ord[2], alpha_2, measure[2], bias[2])
 
