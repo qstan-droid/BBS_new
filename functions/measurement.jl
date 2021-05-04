@@ -5,13 +5,14 @@ function measurement_operator(meas_type, xbasis, N_ord)
 
     coh_space = FockBasis(xbasis[9])
 
+    # Define the measurement operators
     if meas_type == "heterodyne"
         meas = function(x)
             tensor(coherentstate(coh_space, x), dagger(coherentstate(coh_space, x)))
         end
 
     elseif meas_type == "opt_phase"
-        # Define the measurement operators
+        
         meas = function(x)
             sum(exp(1im*n*x)*fockstate(coh_space, n) for n = 0:xbasis[8]*N_ord)/(xbasis[8]*N_ord + 1)
         end
@@ -33,7 +34,7 @@ function meas_exp_prep(meas_op, sample, err_prep_plus, err_prep_min)
     return meas_exp_plus, meas_exp_min, meas_exp_pm, meas_exp_mp
 end
 
-###########################
+#######################
 function measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, meas_exp_1, xbasis, N_ord, samples_1, norms_1, code, block_size)
 
     #### Rejection sampling
@@ -73,7 +74,7 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
 
     # find the envelope constant function
     # ceil_constant = find_max_dist(block_size, block_no, measure_type, meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, code, loc)*1.1
-    ceil_constant = 0.15
+    ceil_constant = 0.1
     counter = false
 
     # unpack loc
@@ -93,7 +94,6 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
             u = rand(Uniform(0, ceil_constant))
 
             # check if condition is true
-            println(abs(f_x))
             if u < abs(f_x)
                 #=
                 if imag(samples[x,y,z]) < 0
@@ -105,6 +105,10 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
                 end
                 =#
                 counter = true
+            else
+                if abs(f_x) > ceil_constant
+                    print("higher!")
+                end
             end
         end
 
@@ -129,79 +133,6 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
     norms[x, y, z] = f_x
 
     return samples[x, y, z], norms[x, y, z], meas_exp[1][x, y, z], meas_exp[2][x, y, z], meas_exp[3][x, y, z], meas_exp[4][x, y, z]
-end
-
-function find_max_dist(block_size, block_no, meas_type, meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, xbasis, code, loc)
-
-    #######
-    if meas_type == "heterodyne"
-        if code == "cat"
-            edge = abs(xbasis[8])
-        elseif code == "binomial"
-            edge = abs(convert(Integer, round(sqrt(xbasis[8]))))
-        end
-        overflow = 0.5
-
-        # create a range of values
-        rad_range = 0:0.1:(edge + overflow)
-        phi_range = 0:0.1:2*pi
-
-        samples_range = zeros(Complex{Float64}, (length(rad_range), length(phi_range)))
-
-        for i = 1:length(rad_range)
-            for j = 1:length(phi_range)
-                samples_range[i, j] = rad_range[i, j]*(cos(phi_range[i, j]) + sin(phi_range[i, j])*1im)
-            end
-        end
-
-    elseif meas_type == "opt_phase"
-        samples_range = 0:0.1:2*pi
-    end
-
-    # find heights for every range and then choose the maximum
-    if block_no == 1
-        if meas_type == "heterodyne"
-            row_range, col_range = size(samples_range)
-            heights = zeros(row_range, col_range)
-
-            for i = 1:row_range
-                for j = 1:col_range
-                    meas_exp_1[1][loc[1], loc[2], loc[3]], meas_exp_1[2][loc[1], loc[2], loc[3]], meas_exp_1[3][loc[1], loc[2], loc[3]], meas_exp_1[4][loc[1], loc[2], loc[3]] = meas_exp(meas_ops[1], samples_range[i, j], err_prep_1[1], err_prep_1[2])
-                    heights[i, j] = pdf_1(meas_exp_1, err_exp_1, err_exp_2, norms, loc, block_size)
-                end
-            end
-
-        elseif meas_type == "opt_phase"
-            heights = zeros(length(samples_range))
-
-            for i = 1:length(samples_range)
-                meas_exp_1[1][loc[1], loc[2], loc[3]], meas_exp_1[2][loc[1], loc[2], loc[3]], meas_exp_1[3][loc[1], loc[2], loc[3]], meas_exp_1[4][loc[1], loc[2], loc[3]] = meas_exp(meas_ops[1], samples_range[i, j], err_prep_1[1], err_prep_1[2])
-                heights[i] = pdf_1(meas_exp_1, err_exp_1, err_exp_2, norms, loc, block_size)
-            end
-        end
-    elseif block_no == 2
-        if meas_type == "heterodyne"
-            row_range, col_range = size(samples_range)
-            heights = zeros(row_range, col_range)
-
-            for i = 1:row_range
-                for j = 1:col_range
-                    heights[i, j] = pdf_2()
-                end
-            end
-
-        elseif meas_type == "opt_phase"
-            heights = zeros(length(samples_range))
-
-            for i = 1:length(samples_range)
-                heights[i] = pdf_2()
-            end
-        end
-    end
-
-    # return the maximum height
-    max_height = findmax(heights)[1]
-    return max_height
 end
 
 function sample_generator(code, meas_type, xbasis)
@@ -358,4 +289,79 @@ function pdf_2(meas_exp_1, meas_exp_2, err_exp_2, norms, norms_1, loc, block_siz
     ### answer ###
     ans = A_fac*B_fac/(4*current_norm_1*current_norm)
     return ans
+end
+
+#######################
+# useless for now
+function find_max_dist(block_size, block_no, meas_type, meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, xbasis, code, loc)
+
+    #######
+    if meas_type == "heterodyne"
+        if code == "cat"
+            edge = abs(xbasis[8])
+        elseif code == "binomial"
+            edge = abs(convert(Integer, round(sqrt(xbasis[8]))))
+        end
+        overflow = 0.5
+
+        # create a range of values
+        rad_range = 0:0.1:(edge + overflow)
+        phi_range = 0:0.1:2*pi
+
+        samples_range = zeros(Complex{Float64}, (length(rad_range), length(phi_range)))
+
+        for i = 1:length(rad_range)
+            for j = 1:length(phi_range)
+                samples_range[i, j] = rad_range[i, j]*(cos(phi_range[i, j]) + sin(phi_range[i, j])*1im)
+            end
+        end
+
+    elseif meas_type == "opt_phase"
+        samples_range = 0:0.1:2*pi
+    end
+
+    # find heights for every range and then choose the maximum
+    if block_no == 1
+        if meas_type == "heterodyne"
+            row_range, col_range = size(samples_range)
+            heights = zeros(row_range, col_range)
+
+            for i = 1:row_range
+                for j = 1:col_range
+                    meas_exp_1[1][loc[1], loc[2], loc[3]], meas_exp_1[2][loc[1], loc[2], loc[3]], meas_exp_1[3][loc[1], loc[2], loc[3]], meas_exp_1[4][loc[1], loc[2], loc[3]] = meas_exp(meas_ops[1], samples_range[i, j], err_prep_1[1], err_prep_1[2])
+                    heights[i, j] = pdf_1(meas_exp_1, err_exp_1, err_exp_2, norms, loc, block_size)
+                end
+            end
+
+        elseif meas_type == "opt_phase"
+            heights = zeros(length(samples_range))
+
+            for i = 1:length(samples_range)
+                meas_exp_1[1][loc[1], loc[2], loc[3]], meas_exp_1[2][loc[1], loc[2], loc[3]], meas_exp_1[3][loc[1], loc[2], loc[3]], meas_exp_1[4][loc[1], loc[2], loc[3]] = meas_exp(meas_ops[1], samples_range[i, j], err_prep_1[1], err_prep_1[2])
+                heights[i] = pdf_1(meas_exp_1, err_exp_1, err_exp_2, norms, loc, block_size)
+            end
+        end
+    elseif block_no == 2
+        if meas_type == "heterodyne"
+            row_range, col_range = size(samples_range)
+            heights = zeros(row_range, col_range)
+
+            for i = 1:row_range
+                for j = 1:col_range
+                    heights[i, j] = pdf_2()
+                end
+            end
+
+        elseif meas_type == "opt_phase"
+            heights = zeros(length(samples_range))
+
+            for i = 1:length(samples_range)
+                heights[i] = pdf_2()
+            end
+        end
+    end
+
+    # return the maximum height
+    max_height = findmax(heights)[1]
+    return max_height
 end

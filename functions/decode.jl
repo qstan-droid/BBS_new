@@ -8,6 +8,7 @@ function decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, 
 
     # how to decode?
     if decode_type == "naive"
+
         # decode each qubit individually
         samples_out_1 = naive_decode(samples_1, N_ord[1], block_size, measure[1], 0)
         samples_out_2 = naive_decode(samples_2, N_ord[2], block_size, measure[2], 0)
@@ -15,22 +16,22 @@ function decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, 
         # decide outcome through these
         outcomes_1 = block_decode(samples_out_1, 1, block_size)
         outcomes_2 = block_decode(samples_out_2, 2, block_size)
-
     elseif decode_type == "bias"
-        # decode each qubit individuallys
+
+        # decode each qubit individually
         samples_out_1 = naive_decode(samples_1, N_ord[1], block_size, measure[1], bias[1])
         samples_out_2 = naive_decode(samples_2, N_ord[2], block_size, measure[2], bias[2])
 
         # decide outcome through these
         outcomes_1 = block_decode(samples_out_1, 1, block_size)
         outcomes_2 = block_decode(samples_out_2, 2, block_size)
-
     elseif decode_type == "ave_max_like"
+
         # take the two samples and some information about the system and
         outcomes_1 = ave_max_like_decoder(samples_1)
         outcomes_2 = ave_max_like_decoder(samples_2)
-
     elseif decode_type == "max_likelihood"
+
         # Take the two samples and find the maximum likelihood
         outcomes_1, outcomes_2 = max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis)
     end

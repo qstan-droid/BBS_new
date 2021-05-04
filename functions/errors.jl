@@ -91,15 +91,10 @@ end
 
 #################################################
 
-function error_prep(loss, dephase, nu_l, xbasis, block_no)
+function error_prep(loss, dephase, nu_l, xbasis)
 
-    if block_no == 1
-        basis_1 = xbasis[1]
-        basis_2 = xbasis[2]
-    elseif block_no == 2
-        basis_1 = xbasis[5]
-        basis_2 = xbasis[6]
-    end
+    basis_1 = xbasis[5]
+    basis_2 = xbasis[6]
 
     a_b = xbasis[4]
     n_b = xbasis[3]

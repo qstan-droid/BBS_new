@@ -1,19 +1,57 @@
 using QuantumOptics
 
+function meas_operator_misc(meas_type, xbasis, N_ord)
+
+    coh_space = FockBasis(xbasis[9])
+
+    if meas_type == "heterodyne"
+        meas = function(x)
+            dagger(coherentstate(coh_space, x))
+        end
+
+    elseif meas_type == "opt_phase"
+        # Define the measurement operators
+        meas = function(x)
+            sum(exp(1im*n*x)*fockstate(coh_space, n) for n = 0:xbasis[8]*N_ord)/(xbasis[8]*N_ord + 1)
+        end
+    elseif meas_type == "homodyne"
+
+    end
+
+    return meas
+end
+
 ##################################################
 # Finds the coefficients behind each term
-function find_coeff(meas_exp_1, meas_exp_2, block_size)
+function find_coeff(block_size, samples_1, samples_2, xbasis_1, xbasis_2, err_prep_1, err_prep_2, measure, N_ord)
 
-    row, col, sample_no = size(meas_exp_1[1])
+    row, col, sample_no = size(samples_1)
     rep = block_size[3]
     P = zeros(Complex{Float64}, (4, sample_no))
 
-    for k = 1:sample_no
-        A_plus = prod(prod(abs(meas_exp_1[1][i, j, k]) for i = 1:row) + prod(abs(meas_exp_1[2][i, j, k]) for i = 1:row) for j = 1:col)/(sqrt(2)^col)
-        A_min = prod(prod(abs(meas_exp_1[1][i, j, k]) for i = 1:row) - prod(abs(meas_exp_1[2][i, j, k]) for i = 1:row) for j = 1:col)/(sqrt(2)^col)
+    meas_1 = meas_operator_misc(measure[1], xbasis_1, N_ord[1])
+    meas_2 = meas_operator_misc(measure[2], xbasis_2, N_ord[2])
 
-        B_plus = prod(prod(prod(abs(meas_exp_2[1][i, (p-1)*col + j, k]) for j = 1:col) + prod(abs(meas_exp_2[2][i, (p-1)*col + j, k]) for j = 1:col) for p = 1:rep) for i = 1:row)/(sqrt(2)^(row*rep))
-        B_min = prod(prod(prod(abs(meas_exp_2[1][i, (p-1)*col + j, k]) for j = 1:col) - prod(abs(meas_exp_2[2][i, (p-1)*col + j, k]) for j = 1:col) for p = 1:rep) for i = 1:row)/(sqrt(2)^(row*rep))
+    for k = 1:sample_no
+        # confirmed that abs is correct
+        A_plus = prod(prod(meas_1(samples_1[i, j, k])*err_prep_1[1][i, j, k] for i = 1:row) + prod(meas_1(samples_1[i, j, k])*err_prep_1[2][i, j, k] for i = 1:row) for j = 1:col)/(sqrt(2)^col)
+        A_min = prod(prod(meas_1(samples_1[i, j, k])*err_prep_1[1][i, j, k] for i = 1:row) - prod(meas_1(samples_1[i, j, k])*err_prep_1[2][i, j, k] for i = 1:row) for j = 1:col)/(sqrt(2)^col)
+
+        B_plus = prod(prod(prod(meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[1][i, (p-1)*col + j, k] for j = 1:col) + prod(meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[2][i, (p-1)*col + j, k] for j = 1:col) for p = 1:rep) for i = 1:row)/(sqrt(2)^(row*rep))
+        B_min = prod(prod(prod(meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[1][i, (p-1)*col + j, k] for j = 1:col) - prod(meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[2][i, (p-1)*col + j, k] for j = 1:col) for p = 1:rep) for i = 1:row)/(sqrt(2)^(row*rep))
+
+
+        #A_plus = dagger(coherentstate(coh_1, samples_1[1, 1, k]))*xbasis_1[1]
+        #A_min = dagger(coherentstate(coh_1, samples_1[1, 1, k]))*xbasis_1[2]
+
+        #B_plus = dagger(coherentstate(coh_2, samples_2[1, 1, k]))*xbasis_2[1]
+        #B_min = dagger(coherentstate(coh_2, samples_2[1, 1, k]))*xbasis_2[2]
+
+        #A_plus = dagger(coherentstate(coh_1, samples_1[1, 1, k]))*(err_prep_1[1][1, 1, k] + err_prep_1[2][1, 1, k])/sqrt(2)
+        #A_min = dagger(coherentstate(coh_1, samples_1[1, 1, k]))*(err_prep_1[1][1, 1, k] - err_prep_1[2][1, 1, k])/sqrt(2)
+
+        #B_plus = dagger(coherentstate(coh_2, samples_2[1, 1, k]))*(err_prep_2[1][1, 1, k] + err_prep_2[2][1, 1, k])/sqrt(2)
+        #B_min = dagger(coherentstate(coh_2, samples_2[1, 1, k]))*(err_prep_2[1][1, 1, k] - err_prep_2[2][1, 1, k])/sqrt(2)
 
         P[1, k] = A_plus*B_plus
         P[2, k] = A_plus*B_min
@@ -44,18 +82,36 @@ function fid_ave_func(outcomes_1, outcomes_2, P)
     row, col, sample_no = size(outcomes_1)
     fid_list = zeros(Float64, sample_no)
 
+    # outcomes print out
+
+
     for k = 1:sample_no
         psi_out = normalize((P[1, k]*psi_ini + P[2, k]*tensor(I_d, X_d)*psi_ini + P[3, k]*tensor(I_d, Z_d)*psi_ini + P[4, k]*tensor(I_d, X_d*Z_d)*psi_ini)/2)
 
+        correction_no = 1
+
         if outcomes_1[k] == true && outcomes_2[k] == true
             correction = tensor(I_d, I_d)
+            correction_no = 1
         elseif outcomes_1[k] == true && outcomes_2[k] == false
             correction = tensor(I_d, X_d)
+            correction_no = 2
         elseif outcomes_1[k] == false && outcomes_2[k] == true
             correction = tensor(I_d, Z_d)
+            correction_no = 3
         elseif outcomes_1[k] == false && outcomes_2[k] == false
             correction = tensor(I_d, Z_d*X_d)
+            correction_no = 4
         end
+
+        # note 
+        # correction_no = 1 ~ I
+        # correction_no = 2 ~ X
+        # correction_no = 3 ~ Z
+        # correction_no = 4 ~ XZ
+
+        #println(outcomes_1[k], " and ", outcomes_2[k], " gives: ", correction_no)
+        
 
         psi_corr = correction*psi_out
         psi_corr_dm = dm(psi_corr)
@@ -63,6 +119,7 @@ function fid_ave_func(outcomes_1, outcomes_2, P)
         # record fidelity
         #fid_list[k] = real(fidelity(psi_corr_dm, psi_ini_dm))^2
         fid_list[k] = norm(dagger(psi_ini)*psi_corr*dagger(psi_corr)*psi_ini)
+        #println("gives a fidelity of: ", fid_list[k])
 
     end
 

@@ -1,15 +1,16 @@
 # number of samples
-sample_no = 100
-
+sample_no = 1000
 # type of measurement
 measure = ["heterodyne", "heterodyne"]
 
 # note the invariable parameters of code
-code = ["cat", "cat"]
-block_size = [1, 1, 1]
-N_ord = [1, 1]
+code = ["binomial", "binomial"]
+block_size = [1, 1, 1] # row, col, rep
+N_ord = [3, 3]
 
 # define what errors are, how strong and where they're applied
+# error_placement = [loss on block_1, dephase on block_1, loss on block_2, dephase on block_2]
+# error_info = [nu_loss_1, nu_dephase_1, nu_loss_2, nu_dephase_2]
 err_place = [false, false, false, false]
 err_info = [0.0, 0.0, 0.0, 0.0]
 
@@ -19,14 +20,14 @@ x_var = "alpha"
 if x_var == "alpha"
     bias = [0, 0]
 
-    x_min = 2
-    x_step = 0.1
-    x_max = 2.5
+    x_min = 1
+    x_step = 1
+    x_max = 20
 
     x = x_min:x_step:x_max
     # same alpha for both blocks
-    dif_alpha = false
-    alpha_2 = 50
+    dif_alpha = true
+    alpha_2 = 25
 elseif x_var == "bias"
     alpha = [10, 10]
     where_bias = 1
