@@ -30,8 +30,6 @@ function code_prep(N_ord, dim, alpha, code)
         n_b = number(b)
         a_b = destroy(b)
 
-        println(dagger(zero_bin)*one_bin)
-
         prep_state = [plus_bin, min_bin, n_b, a_b, zero_bin, one_bin, b, alpha, dim]
     end
 

@@ -8,7 +8,7 @@ function measurement_operator(meas_type, xbasis, N_ord)
     # Define the measurement operators
     if meas_type == "heterodyne"
         meas = function(x)
-            tensor(coherentstate(coh_space, x), dagger(coherentstate(coh_space, x)))
+            tensor(coherentstate(coh_space, x), dagger(coherentstate(coh_space, x)))/pi
         end
 
     elseif meas_type == "opt_phase"
@@ -36,7 +36,7 @@ function meas_exp_prep(meas_op, sample, err_prep_plus, err_prep_min)
 end
 
 #######################
-function measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, meas_exp_1, xbasis, N_ord, samples_1, norms_1, code, block_size)
+function measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, meas_exp_1, xbasis, N_ord, samples_1, norms_1, code, block_size, loss_norm_1, loss_norm_2)
 
     #### Rejection sampling
     meas_op_1 = measurement_operator(measure_type[1], xbasis[1], N_ord[1])
@@ -63,7 +63,7 @@ function measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block
     for k = 1:sample_no
         for i = 1:row
             for j = 1:col
-                samples[i, j, k], norms[i, j, k], meas_exp[1][i, j, k], meas_exp[2][i, j, k], meas_exp[3][i, j, k], meas_exp[4][i, j, k] = rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, xbasis, N_ord, samples, samples_1, code, block_size, meas_ops, meas_exp, [i, j, k], meas_exp_1, norms, norms_1)
+                samples[i, j, k], norms[i, j, k], meas_exp[1][i, j, k], meas_exp[2][i, j, k], meas_exp[3][i, j, k], meas_exp[4][i, j, k] = rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, xbasis, N_ord, samples, samples_1, code, block_size, meas_ops, meas_exp, [i, j, k], meas_exp_1, norms, norms_1, loss_norm_1[:, :, k], loss_norm_2[:, :, k])
             end
         end
     end
@@ -71,7 +71,7 @@ function measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block
     return samples, norms, meas_exp[1], meas_exp[2], meas_exp[3], meas_exp[4]
 end
 
-function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, xbasis, N_ord, samples, samples_1, code, block_size, meas_ops, meas_exp, loc, meas_exp_1, norms, norms_1)
+function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, xbasis, N_ord, samples, samples_1, code, block_size, meas_ops, meas_exp, loc, meas_exp_1, norms, norms_1, loss_norm_1, loss_norm_2)
 
     # find the envelope constant function
     #ceil_constant = find_max_dist(block_size, block_no, measure_type, meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, xbasis[block_no], code, loc)*1.1
@@ -89,26 +89,22 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
             samples[x, y, z] = sample_generator(code[1], measure_type[1], xbasis[1])
             meas_exp[1][x, y, z], meas_exp[2][x, y, z], meas_exp[3][x, y, z], meas_exp[4][x, y, z] = meas_exp_prep(meas_ops[block_no], samples[x, y, z], err_prep_1[1][x, y, z], err_prep_1[2][x, y, z])
 
-            global f_x = pdf_1(meas_exp, err_exp_1, err_exp_2, norms, loc, block_size)
+            global f_x = pdf_1(meas_exp, err_exp_1, err_exp_2, norms, loc, block_size, loss_norm_1, loss_norm_2)
 
             # sample a random number between 1 and max
             u = rand(Uniform(0, ceil_constant))
 
             # check if condition is true
-            if u < abs(f_x)
-                #=
-                if imag(samples[x,y,z]) < 0
-                    println("negative samples: ", samples[x, y, z])
-                    println("negative amplitude: ", abs(f_x))
-                elseif imag(samples[x, y, z]) > 0
-                    println("positive samples: ", samples[x, y, z])
-                    println("positive amplitude: ", abs(f_x))
-                end
-                =#
-                counter = true
+            if abs(f_x) > 1
+                println("WTF")
             else
-                if abs(f_x) > ceil_constant
-                    print("higher!")
+                if u < abs(f_x)
+
+                    counter = true
+                else
+                    if abs(f_x) > ceil_constant
+                        print("higher!")
+                    end
                 end
             end
         end
@@ -119,17 +115,21 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
             samples[x, y, z] = sample_generator(code[2], measure_type[2], xbasis[2])
             meas_exp[1][x, y, z], meas_exp[2][x, y, z], meas_exp[3][x, y, z], meas_exp[4][x, y, z] = meas_exp_prep(meas_ops[block_no], samples[x, y, z], err_prep_2[1][x, y, z], err_prep_2[2][x, y, z])
 
-            global f_x = pdf_2(meas_exp_1, meas_exp, err_exp_2, norms, norms_1, loc, block_size)
+            global f_x = pdf_2(meas_exp_1, meas_exp, err_exp_2, norms, norms_1, loc, block_size, loss_norm_1, loss_norm_2)
 
             # sample a random number
             u = rand(Uniform(0, ceil_constant))
 
             # condition
-            if u < abs(f_x)
-                counter = true
+            if abs(f_x) > 1
+                println("WTF")
             else
-                if abs(f_x) > ceil_constant
-                    print("higher 2!")
+                if u < abs(f_x)
+                    counter = true
+                else
+                    if abs(f_x) > ceil_constant
+                        print("higher 2!")
+                    end
                 end
             end
         end
@@ -163,7 +163,7 @@ end
 
 #######################
 # Probability functions
-function pdf_1(meas_exp_1, err_exp_1, err_exp_2, norms, loc, block_size)
+function pdf_1(meas_exp_1, err_exp_1, err_exp_2, norms, loc, block_size, loss_norm_1, loss_norm_2)
 
     # setup all of the matrices
     no_row = block_size[1]
@@ -212,7 +212,7 @@ function pdf_1(meas_exp_1, err_exp_1, err_exp_2, norms, loc, block_size)
     current_norm = 1
     for i = 1:no_row
         for j = 1:no_col
-            current_norm = current_norm*norms[i, j]
+            current_norm = current_norm*norms[i, j]*loss_norm_1[i, j]*loss_norm_2[i, j]
         end
     end
 
@@ -221,7 +221,7 @@ function pdf_1(meas_exp_1, err_exp_1, err_exp_2, norms, loc, block_size)
     return ans
 end
 
-function pdf_2(meas_exp_1, meas_exp_2, err_exp_2, norms, norms_1, loc, block_size)
+function pdf_2(meas_exp_1, meas_exp_2, err_exp_2, norms, norms_1, loc, block_size, loss_norm_1, loss_norm_2)
 
     # setup all of the matrices
     no_row = block_size[1]
@@ -277,22 +277,15 @@ function pdf_2(meas_exp_1, meas_exp_2, err_exp_2, norms, norms_1, loc, block_siz
     B_fac = B_plus + B_min
 
     ### norms ###
-    current_norm_1 = 1
-    for i = 1:no_row
-        for j = 1:no_col
-            current_norm_1 = current_norm_1*norms_1[i, j]
-        end
-    end
-
     current_norm = 1
     for i = 1:no_row
-        for j = 1:no_col*rep
-            current_norm = current_norm*norms[i, j]
+        for j = 1:no_col
+            current_norm = current_norm*norms_1[i, j]*norms[i, j]*loss_norm_1[i, j]*loss_norm_2[i, j]
         end
     end
 
     ### answer ###
-    ans = A_fac*B_fac/(4*current_norm_1*current_norm)
+    ans = A_fac*B_fac/(4*current_norm)
     return ans
 end
 
