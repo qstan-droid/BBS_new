@@ -1,5 +1,6 @@
 using QuantumOptics
 using Distributions
+include("measurement.jl")
 
 function decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, sample_no, decode_type, measure, bias, xbasis)
     # initialise empty arrays
@@ -33,7 +34,7 @@ function decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, 
     elseif decode_type == "max_likelihood"
 
         # Take the two samples and find the maximum likelihood
-        outcomes_1, outcomes_2 = max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis)
+        outcomes_1, outcomes_2 = max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis, measure)
     end
 
     return outcomes_1, outcomes_2
@@ -62,6 +63,8 @@ function max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis, measure
     part = zeros(4)
     row, col, sample_no = size(samples_1)
 
+    println(sample_no)
+
     xbasis_1 = xbasis[1]
     xbasis_2 = xbasis[2]
 
@@ -74,8 +77,8 @@ function max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis, measure
     meas_ops = [meas_op_1, meas_op_2]
 
     # outcomes for majority
-    maj_1 = zeros(length(sample_no))
-    maj_2 = zeros(length(sample_no))
+    maj_1 = zeros(Bool, (row, col, sample_no))
+    maj_2 = zeros(Bool, (row, col, sample_no))
 
     # Fock space operators
     n_b_1 = xbasis_1[3]
@@ -99,33 +102,42 @@ function max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis, measure
 
     # Loss kraus operators
     if nu_loss_2 != 0
-        A(p1, p2) = (((1-exp(-nu_loss_1))^(p1/2)) / sqrt(factorial(big(p1))))*exp(-nu_loss*dense(n_b_1)/2)*a_b_1^p1 * exp(-1im*(p2*pi/(N_ord_1*N_ord_2))*dense(n_b_2))
+        A = function(p1, p2) 
+            (((1-exp(-nu_loss_1))^(p1/2))/sqrt(factorial(big(p1))))*exp(-nu_loss_1*dense(n_b_1)/2)*a_b_1^p1 * exp(-1im*(p2*pi/(N_ord_1*N_ord_2))*dense(n_b_2))
+        end
     else
-        A(p1, p2) = (((1-exp(-nu_loss_1))^(p/2)) / sqrt(factorial(big(p))))*exp(-nu_loss*dense(n_b_1)/2)*a_b_1^p
+        A = function(p1, p2) 
+            (((1-exp(-nu_loss_1))^(p1/2))/sqrt(factorial(big(p1))))*exp(-nu_loss_1*dense(n_b_1)/2)*a_b_1^p1
+        end
     end
 
     if nu_loss_1 != 0
-        B(p1, p2) = (((1-exp(-nu_loss_2))^(p1/2)) / sqrt(factorial(big(p1))))*exp(-nu_loss_2*dense(n_b_2)/2)*a_b_2^p1 * exp(-1im*(p2*pi/(N_ord_1*N_ord_2))*dense(n_b_2))
+        B = function(p1, p2) 
+            #(((1-exp(-nu_loss_2))^(p1/2))/sqrt(factorial(big(p1))))*exp(-nu_loss_2*dense(n_b_2)/2)*a_b_2^p1 * exp(-1im*(p2*pi/(N_ord_1*N_ord_2))*dense(n_b_2))
+            exp(-1im*(p2*pi/(N_ord_1*N_ord_2))*dense(n_b_2))
+        end
     else
-        B(p1, p2) = (((1-exp(-nu_loss_2))^(p1/2)) / sqrt(factorial(big(p1))))*exp(-nu_loss_2*dense(n_b_2)/2)*a_b_2^p1
+        B = function(p1, p2) 
+            (((1-exp(-nu_loss_2))^(p1/2))/sqrt(factorial(big(p1))))*exp(-nu_loss_2*dense(n_b_2)/2)*a_b_2^p1
+        end
     end
 
     # find all likelihoods and choose the max
 
-    for i = collect(1:length(samples_1))
-        meas_op_mat_1 = tensor(meas_ops[1](samples_1[i]), dagger(meas_ops[1](samples_1[i])))
-        meas_op_mat_2 = tensor(meas_ops[2](samples_2[i]), dagger(meas_ops[2](samples_2[i])))
+    for i = collect(1:sample_no)
+        meas_ops_1 = meas_ops[1](samples_1[i])
+        meas_ops_2 = meas_ops[2](samples_2[i])
 
         if nu_loss_1 == 0.0 && nu_loss_2 == 0.0
-            part[1] = norm(tr(meas_op_mat_1*plus_1)*tr(meas_op_mat_2*plus_2))
-            part[2] = norm(tr(meas_op_mat_1*plus_1)*tr(meas_op_mat_2*min_2))
-            part[3] = norm(tr(meas_op_mat_1*min_1)*tr(meas_op_mat_2*plus_2))
-            part[4] = norm(tr(meas_op_mat_1*min_1)*tr(meas_op_mat_2*min_2))
+            part[1] = norm(tr(meas_ops_1*plus_1)*tr(meas_ops_2*plus_2))
+            part[2] = norm(tr(meas_ops_1*plus_1)*tr(meas_ops_2*min_2))
+            part[3] = norm(tr(meas_ops_1*min_1)*tr(meas_ops_2*plus_2))
+            part[4] = norm(tr(meas_ops_1*min_1)*tr(meas_ops_2*min_2))
         else
-            part[1] = norm(sum(tr(meas_op_mat_1*(A(j)*plus_1*dagger(A(j))))*tr(meas_op_mat_2*(B_1(j)*plus_2*dagger(B_1(j)))) for j = 0:100))
-            part[2] = norm(sum(tr(meas_op_mat_1*(A(j)*plus_1*dagger(A(j))))*tr(meas_op_mat_2*(B_1(j)*min_2*dagger(B_1(j)))) for j = 0:100))
-            part[3] = norm(sum(tr(meas_op_mat_1*(A(j)*min_1*dagger(A(j))))*tr(meas_op_mat_2*(B_1(j)*plus_2*dagger(B_1(j)))) for j = 0:100))
-            part[4] = norm(sum(tr(meas_op_mat_1*(A(j)*min_1*dagger(A(j))))*tr(meas_op_mat_2*(B_1(j)*min_2*dagger(B_1(j)))) for j = 0:100))
+            part[1] = norm(sum(tr(meas_ops_1*(A(j, 0)*plus_1*dagger(A(j, 0))))*tr(meas_ops_2*(B(0, j)*plus_2*dagger(B(0, j)))) for j = 0:100))
+            part[2] = norm(sum(tr(meas_ops_1*(A(j, 0)*plus_1*dagger(A(j, 0))))*tr(meas_ops_2*(B(0, j)*min_2*dagger(B(0, j)))) for j = 0:100))
+            part[3] = norm(sum(tr(meas_ops_1*(A(j, 0)*min_1*dagger(A(j, 0))))*tr(meas_ops_2*(B(0, j)*plus_2*dagger(B(0, j)))) for j = 0:100))
+            part[4] = norm(sum(tr(meas_ops_1*(A(j, 0)*min_1*dagger(A(j, 0))))*tr(meas_ops_2*(B(0, j)*min_2*dagger(B(0, j)))) for j = 0:100))
         end
 
         max_index = findmax(part)[2]
@@ -139,7 +151,7 @@ function max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis, measure
         elseif max_index == 3
             maj_1[i] = false
             maj_2[i] = true
-        else
+        elseif max_index == 4
             maj_1[i] = false
             maj_2[i] = false
         end

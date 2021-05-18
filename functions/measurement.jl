@@ -14,7 +14,8 @@ function measurement_operator(meas_type, xbasis, N_ord)
     elseif meas_type == "opt_phase"
         
         meas = function(x)
-            sum(exp(1im*n*x)*fockstate(coh_space, n) for n = 0:xbasis[8]*N_ord)/(xbasis[8]*N_ord + 1)
+            # sum(exp(1im*n*x)*fockstate(coh_space, n) for n = 0:xbasis[8]*N_ord)/(xbasis[8]*N_ord + 1)
+            sum(sum(exp(1im*(m-n)*x)*tensor(fockstate(coh_space, m), dagger(fockstate(coh_space, n))) for n = 0:xbasis[8]*N_ord) for m = 0:xbasis[8]*N_ord)/(xbasis[8]*N_ord + 1)
         end
     elseif meas_type == "homodyne"
 
@@ -73,7 +74,7 @@ end
 function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, xbasis, N_ord, samples, samples_1, code, block_size, meas_ops, meas_exp, loc, meas_exp_1, norms, norms_1)
 
     # find the envelope constant function
-    # ceil_constant = find_max_dist(block_size, block_no, measure_type, meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, code, loc)*1.1
+    #ceil_constant = find_max_dist(block_size, block_no, measure_type, meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, xbasis[block_no], code, loc)*1.1
     ceil_constant = 0.1
     counter = false
 
@@ -126,6 +127,10 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
             # condition
             if u < abs(f_x)
                 counter = true
+            else
+                if abs(f_x) > ceil_constant
+                    print("higher 2!")
+                end
             end
         end
     end
@@ -296,13 +301,14 @@ end
 function find_max_dist(block_size, block_no, meas_type, meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, xbasis, code, loc)
 
     #######
+    # prepare a samples range
     if meas_type == "heterodyne"
         if code == "cat"
             edge = abs(xbasis[8])
         elseif code == "binomial"
             edge = abs(convert(Integer, round(sqrt(xbasis[8]))))
         end
-        overflow = 0.5
+        overflow = 1.5
 
         # create a range of values
         rad_range = 0:0.1:(edge + overflow)
@@ -324,12 +330,13 @@ function find_max_dist(block_size, block_no, meas_type, meas_ops, err_prep_1, er
     if block_no == 1
         if meas_type == "heterodyne"
             row_range, col_range = size(samples_range)
-            heights = zeros(row_range, col_range)
+            global heights = zeros(row_range, col_range)
+            global norms = zeros(row_range, col_range)
 
             for i = 1:row_range
                 for j = 1:col_range
-                    meas_exp_1[1][loc[1], loc[2], loc[3]], meas_exp_1[2][loc[1], loc[2], loc[3]], meas_exp_1[3][loc[1], loc[2], loc[3]], meas_exp_1[4][loc[1], loc[2], loc[3]] = meas_exp(meas_ops[1], samples_range[i, j], err_prep_1[1], err_prep_1[2])
-                    heights[i, j] = pdf_1(meas_exp_1, err_exp_1, err_exp_2, norms, loc, block_size)
+                    meas_exp[1][loc[1], loc[2], loc[3]], meas_exp[2][loc[1], loc[2], loc[3]], meas_exp[3][loc[1], loc[2], loc[3]], meas_exp[4][loc[1], loc[2], loc[3]] = meas_exp(meas_ops[1], samples_range[i, j], err_prep_1[1][loc[1], loc[2], loc[3]], err_prep_1[2][loc[1], loc[2], loc[3]])
+                    heights[i, j] = pdf_1(meas_exp, err_exp_1, err_exp_2, norms, loc, block_size)
                 end
             end
 
@@ -337,18 +344,20 @@ function find_max_dist(block_size, block_no, meas_type, meas_ops, err_prep_1, er
             heights = zeros(length(samples_range))
 
             for i = 1:length(samples_range)
-                meas_exp_1[1][loc[1], loc[2], loc[3]], meas_exp_1[2][loc[1], loc[2], loc[3]], meas_exp_1[3][loc[1], loc[2], loc[3]], meas_exp_1[4][loc[1], loc[2], loc[3]] = meas_exp(meas_ops[1], samples_range[i, j], err_prep_1[1], err_prep_1[2])
-                heights[i] = pdf_1(meas_exp_1, err_exp_1, err_exp_2, norms, loc, block_size)
+                meas_exp[1][loc[1], loc[2], loc[3]], meas_exp[2][loc[1], loc[2], loc[3]], meas_exp[3][loc[1], loc[2], loc[3]], meas_exp[4][loc[1], loc[2], loc[3]] = meas_exp(meas_ops[1], samples_range[i, j], err_prep_1[1][loc[1], loc[2], loc[3]], err_prep_1[2][loc[1], loc[2], loc[3]])
+                heights[i] = pdf_1(meas_exp, err_exp_1, err_exp_2, norms, loc, block_size)
             end
         end
     elseif block_no == 2
         if meas_type == "heterodyne"
             row_range, col_range = size(samples_range)
-            heights = zeros(row_range, col_range)
+            global heights = zeros(row_range, col_range)
+            global norms = zeros(row_range, col_range)
 
             for i = 1:row_range
                 for j = 1:col_range
-                    heights[i, j] = pdf_2()
+                    meas_exp[1][loc[1], loc[2], loc[3]], meas_exp[2][loc[1], loc[2], loc[3]], meas_exp[3][loc[1], loc[2], loc[3]], meas_exp[4][loc[1], loc[2], loc[3]] = meas_exp(meas_ops[2], samples_range[i, j], err_prep_2[1][loc[1], loc[2], loc[3]], err_prep_2[2][loc[1], loc[2], loc[3]])
+                    heights[i, j] = pdf_2(meas_exp_1, meas_exp, err_exp_2, norms, norms_1, loc, block_size)
                 end
             end
 

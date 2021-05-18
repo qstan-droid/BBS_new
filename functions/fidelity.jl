@@ -8,14 +8,13 @@ function meas_operator_misc(meas_type, xbasis, N_ord)
         meas = function(x)
             dagger(coherentstate(coh_space, x))
         end
-
     elseif meas_type == "opt_phase"
         # Define the measurement operators
         meas = function(x)
-            sum(exp(1im*n*x)*fockstate(coh_space, n) for n = 0:xbasis[8]*N_ord)/(xbasis[8]*N_ord + 1)
+            dagger(sum(exp(1im*n*x)*fockstate(coh_space, n) for n = 0:xbasis[8]*N_ord)/(xbasis[8]*N_ord + 1))
         end
     elseif meas_type == "homodyne"
-
+        
     end
 
     return meas

@@ -12,8 +12,6 @@ function circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, d
     dim_2 = find_dim(code[2], alpha[2], N_ord[2])
     dim = [dim_1, dim_2]
 
-    
-
     # begin code preparation
     xbasis_1 = code_prep(N_ord[1], dim[1], alpha[1], code[1])
     xbasis_2 = code_prep(N_ord[2], dim[2], alpha[2], code[2])
@@ -29,6 +27,8 @@ function circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, d
 
     loss_2, loss_norm_2 = loss_sample(err_place[3], err_info[3], block_size[2]*block_size[3], block_size[1], xbasis_2, sample_no)
     dephase_2, dephase_norm_2 = dephase_sample(err_place[4], err_info[4], block_size[2]*block_size[3], block_size[1], sample_no)
+
+    println("passed error sampling")
 
     # propagate errors
     # we assume the brooks-preskill code
@@ -62,6 +62,8 @@ function circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, d
     meas_exp_1 = [meas_exp_plus_1, meas_exp_min_1, meas_exp_pm_1, meas_exp_mp_1]
     samples_2, norms_2, meas_exp_zero_2, meas_exp_one_2, meas_exp_zo_2, meas_exp_oz_2 = measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, 2, measure, meas_exp_1, [xbasis_1, xbasis_2], N_ord, samples_1, norms_1, code, block_size)
     meas_exp_2 = [meas_exp_zero_2, meas_exp_one_2, meas_exp_zo_2, meas_exp_oz_2]
+    
+    println("passed measurement sampling")
 
     ###################################################################################################
     # Thus comes decoding
@@ -69,10 +71,14 @@ function circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, d
     # bias = [bias_amplitude_1, bias_amplitude_2]
     outcomes_1, outcomes_2 = decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, sample_no, decode_type, measure, bias, xbasis)
 
+    println("passed outcomes")
+
     ###################################################################################################
     # First we find the
     P = find_coeff(block_size, samples_1, samples_2, xbasis_1, xbasis_2, err_prep_1, err_prep_2, measure, N_ord)
     ave_fidelity, fid_list = fid_ave_func(outcomes_1, outcomes_2, P)
+
+    println("passed fidelity calculation")
 
     return ave_fidelity, fid_list, samples_1, samples_2
 end

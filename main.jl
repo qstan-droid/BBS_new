@@ -18,7 +18,7 @@ ave_fid = zeros(Float64, length(x))
 for i = 1:length(x)
 
     println("-------------------------------------")
-    println("x_vary: ", x_var, " | ", "x: ", x[i], " | order: ", N_ord )
+    println("x_vary: ", x_var, " | ", "x: ", x[i], " | ancilla mode alpha : ",  dif_alpha, "-", alpha_2, " | order: ", N_ord, " | block size (row, col, rep): ", block_size, " | ")
 
     @time begin
         if x_var == "alpha"
@@ -41,11 +41,11 @@ for i = 1:length(x)
     append!(fid_list, fid_list_temp)
 end
 
-ARGS = [1, "3_by_3_no_error"]
+ARGS = ["opt_phase", "single_mode_max_like_error_(-2)"]
 
 # now we save onto a folder
 #open("parameters.txt", "w") do file
-open(string("data_", ARGS[2], "/parameters.txt"), "w") do file
+open(string("data_", ARGS[2], "/parameters_", ARGS[1],".txt"), "w") do file
     write(file, string("code: ", code, "\n"))
     write(file, string("sample_no: ", sample_no, "\n"))
     write(file, string("n: ", block_size[1], "\n"))
@@ -77,7 +77,7 @@ end
 ###########################################
 # PLOTTING
 
-plot(x, 1 .- ave_fid)
+#plot(x, 1 .- ave_fid)
 
 #spot = 1
 #p1_plus, p1_min = samples_plot(samples_1[sample_no*(spot - 1) + 1:sample_no*spot], N_ord[1], x[spot], measure[1], bias[1])
