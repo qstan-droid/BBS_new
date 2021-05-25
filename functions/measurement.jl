@@ -96,7 +96,7 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
 
             # check if condition is true
             if abs(f_x) > 1
-                println("WTF")
+                println("goes above one: ", f_x)
             else
                 if u < abs(f_x)
 
@@ -122,7 +122,7 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
 
             # condition
             if abs(f_x) > 1
-                println("WTF")
+                println("goes above one: ", abs(f_x))
             else
                 if u < abs(f_x)
                     counter = true
@@ -218,6 +218,16 @@ function pdf_1(meas_exp_1, err_exp_1, err_exp_2, norms, loc, block_size, loss_no
 
     ### answer ###
     ans = A_fac*B_fac/(4*current_norm)
+
+    if abs(ans) > 1
+        println("pdf 1")
+        println("A_fac: ", A_fac)
+        println("B_fac: ", B_fac)
+        println("current_norm: ", current_norm)
+        println("ans: ", ans)
+        sleep(5)
+    end
+
     return ans
 end
 

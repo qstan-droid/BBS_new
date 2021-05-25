@@ -1,11 +1,11 @@
 # number of samples
-sample_no = 1000
+sample_no = 1
 # type of measurement
 measure = ["heterodyne", "heterodyne"]
 
 # note the invariable parameters of code
 code = ["binomial", "binomial"]
-block_size = [1, 3, 1] # row, col, rep
+block_size = [1, 1, 1] # row, col, rep
 N_ord = [3, 1]
 
 # define what errors are, how strong and where they're applied

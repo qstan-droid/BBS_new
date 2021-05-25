@@ -52,6 +52,21 @@ function circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, d
     err_exp_1 = [err_exp_1_zero, err_exp_1_one, err_exp_1_zo, err_exp_1_oz]
     err_exp_2 = [err_exp_2_zero, err_exp_2_one, err_exp_2_zo, err_exp_2_oz]
 
+    println("loss_1: ", loss_1)
+    println("dephase_1: ", dephase_1)
+    println("err_exp_1_zero: ", err_exp_1_zero)
+    println("err_exp_1_one: ", err_exp_1_one)
+    println("err_exp_1_oz: ", err_exp_1_oz)
+    println("err_exp_1_zo: ", err_exp_1_zo)
+        
+    println("loss_2: ", loss_2)
+    println("dephase_2: ", dephase_2)
+    println("err_exp_2_zero: ", err_exp_2_zero)
+    println("err_exp_2_one: ", err_exp_2_one)
+    println("err_exp_2_oz: ", err_exp_2_oz)
+    println("err_exp_2_zo: ", err_exp_2_zo)
+    sleep(3600)
+
     ###################################################################################################
     # generate measurement samples
     samples_1 = 0
