@@ -41,7 +41,7 @@ for i = 1:length(x)
     append!(fid_list, fid_list_temp)
 end
 
-ARGS = ["heterodyne", "three_mode_no_error"]
+ARGS = ["opt_phase", "single_mode_max_like_error_(-2)"]
 
 # now we save onto a folder
 #open("parameters.txt", "w") do file
@@ -75,7 +75,10 @@ open(string("data_", ARGS[2], "/parameters_", ARGS[1],".txt"), "w") do file
 end
 
 ###########################################
-# PLOTTING
+#                                         #
+#                PLOTTING                 #
+#                                         #
+###########################################
 
 #plot(x, 1 .- ave_fid)
 

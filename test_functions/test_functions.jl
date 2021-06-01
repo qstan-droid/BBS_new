@@ -28,3 +28,37 @@ function samples_plot(samples, N_ord, alpha, meas_type, bias)
 
     return p_plus, p_min
 end
+
+function plot_samples(samples, norms, measure, block_no)
+    no_row, no_col, sample_size = size(samples)
+
+    # split samples into x and y
+    x = zeros(no_row, no_col, sample_size)
+    y = zeros(no_row, no_col, sample_size)
+    norm_abs = zeros(no_row, no_col, sample_size)
+    for i = 1:sample_size
+        for r = 1:no_row
+            for c = 1:no_col
+                if measure == "heterodyne"
+                    x[r, c, i] = real(samples[r, c, i])
+                    y[r, c, i] = imag(samples[r, c, i])
+                elseif measure == "opt_phase"
+                    x[r, c, i] = cos(real(samples[r, c, i]))
+                    y[r, c, i] = sin(real(samples[r, c, i]))
+                end
+                norm_abs[r, c, i] = abs(norms[r, c, i])
+            end
+        end
+    end
+
+    # plot shit
+    for r = 1:no_row
+        for c = 1:no_col
+            plot3D = scatter(x[r, c, :], y[r, c, :], norm_abs[r, c, :])
+            plotPlane = scatter(x[r, c, :], y[r, c, :])
+
+            savefig(plot3D, string("plot3D_", measure, "_(", r, ",", c, ")_", block_no))
+            savefig(plotPlane, string("plotPlane_", measure, "_(", r, ",", c, ")_", block_no))
+        end
+    end
+end

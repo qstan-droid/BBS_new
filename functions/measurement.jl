@@ -75,7 +75,7 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
 
     # find the envelope constant function
     #ceil_constant = find_max_dist(block_size, block_no, measure_type, meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, xbasis[block_no], code, loc)*1.1
-    ceil_constant = 0.1
+    ceil_constant = 0.3
     counter = false
 
     # unpack loc
@@ -95,16 +95,14 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
             u = rand(Uniform(0, ceil_constant))
 
             # check if condition is true
-            if abs(f_x) > 1
-                println("goes above one: ", f_x)
+            if abs(f_x) > ceil_constant
+                println("goes above one: ", abs(f_x))
             else
                 if u < abs(f_x)
-
+                    #println(samples[x, y, z])
                     counter = true
-                else
-                    if abs(f_x) > ceil_constant
-                        print("higher!")
-                    end
+                else 
+                    #println("rejected: ", samples[x, y, z])
                 end
             end
         end
@@ -121,15 +119,13 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
             u = rand(Uniform(0, ceil_constant))
 
             # condition
-            if abs(f_x) > 1
+            if abs(f_x) > ceil_constant
                 println("goes above one: ", abs(f_x))
             else
                 if u < abs(f_x)
                     counter = true
                 else
-                    if abs(f_x) > ceil_constant
-                        print("higher 2!")
-                    end
+                    #println("rejected: ", samples[x, y, z])
                 end
             end
         end
@@ -148,7 +144,7 @@ function sample_generator(code, meas_type, xbasis)
         elseif code == "binomial"
             edge = abs(convert(Integer, round(sqrt(xbasis[8]))))
         end
-        overflow = 3
+        overflow = 1.5
 
         # sample over a circle for lesser surface area
         rad = rand(Uniform(0, edge + overflow))
@@ -219,15 +215,6 @@ function pdf_1(meas_exp_1, err_exp_1, err_exp_2, norms, loc, block_size, loss_no
     ### answer ###
     ans = A_fac*B_fac/(4*current_norm)
 
-    if abs(ans) > 1
-        println("pdf 1")
-        println("A_fac: ", A_fac)
-        println("B_fac: ", B_fac)
-        println("current_norm: ", current_norm)
-        println("ans: ", ans)
-        sleep(5)
-    end
-
     return ans
 end
 
@@ -278,6 +265,7 @@ function pdf_2(meas_exp_1, meas_exp_2, err_exp_2, norms, norms_1, loc, block_siz
                 (prod(meas_exp_2_zero[x, (rho-1)*no_col + j] for j = 1:y_tru; init=1)*prod(err_exp_2_zero[x, (rho-1)*no_col + j] for j = y_tru + 1:no_col; init=1) + prod(meas_exp_2_zo[x, (rho-1)*no_col + j] for j = 1:y_tru; init=1)*prod(err_exp_2_zo[x, (rho-1)*no_col + j] for j = y_tru + 1:no_col; init=1) + prod(meas_exp_2_oz[x, (rho-1)*no_col + j] for j = 1:y_tru; init=1)*prod(err_exp_2_oz[x, (rho-1)*no_col + j] for j = y_tru + 1:no_col; init=1) + prod(meas_exp_2_one[x, (rho-1)*no_col + j] for j = 1:y_tru; init=1)*prod(err_exp_2_zero[x, (rho-1)*no_col + j] for j = y_tru+1:no_col; init=1))*
                 prod(prod(err_exp_2_zero[x, (p-1)*no_col+j] for j = 1:no_col; init=1) + prod(err_exp_2_zo[x, (p-1)*no_col + j] for j = 1:no_col; init=1) + prod(err_exp_2_oz[x, (p-1)*no_col + j] for j = 1:no_col; init=1) + prod(err_exp_2_one[x, (p-1)*no_col + j] for j = 1:no_col; init=1) for p = rho + 1:rep; init=1)*
                 prod(prod(prod(err_exp_2_zero[i, (p-1)*no_col+j] for j = 1:no_col; init=1) + prod(err_exp_2_zo[i, (p-1)*no_col+j] for j = 1:no_col; init=1) + prod(err_exp_2_oz[i, (p-1)*no_col+j] for j = 1:no_col; init=1) + prod(err_exp_2_one[i, (p-1)*no_col+j] for j = 1:no_col; init=1) for p = 1:rep; init=1) for i = x+1:no_row; init=1)/(2^(no_row*rep))
+    
     B_min = prod(prod(prod(meas_exp_2_zero[i, (p-1)*no_col + j] for j = 1:no_col; init=1) - prod(meas_exp_2_zo[i, (p-1)*no_col + j] for j = 1:no_col; init=1) - prod(meas_exp_2_oz[i, (p-1)*no_col + j] for j = 1:no_col; init=1) + prod(meas_exp_2_one[i, (p-1)*no_col + j] for j = 1:no_col; init=1) for p = 1:rep; init=1) for i = 1:x-1; init=1)*
                 prod(prod(meas_exp_2_zero[x, (p-1)*no_col + j] for j = 1:no_col; init=1) - prod(meas_exp_2_zo[x, (p-1)*no_col + j] for j = 1:no_col; init=1) - prod(meas_exp_2_oz[x, (p-1)*no_col + j] for j = 1:no_col; init=1) + prod(meas_exp_2_one[x, (p-1)*no_col + j] for j = 1:no_col; init=1) for p = 1:rho-1; init=1)*
                 (prod(meas_exp_2_zero[x, (rho-1)*no_col + j] for j = 1:y_tru; init=1)*prod(err_exp_2_zero[x, (rho-1)*no_col + j] for j = y_tru + 1:no_col; init=1) - prod(meas_exp_2_zo[x, (rho-1)*no_col + j] for j = 1:y_tru; init=1)*prod(err_exp_2_zo[x, (rho-1)*no_col + j] for j = y_tru + 1:no_col; init=1) - prod(meas_exp_2_oz[x, (rho-1)*no_col + j] for j = 1:y_tru; init=1)*prod(err_exp_2_oz[x, (rho-1)*no_col + j] for j = y_tru + 1:no_col; init=1) + prod(meas_exp_2_one[x, (rho-1)*no_col + j] for j = 1:y_tru; init=1)*prod(err_exp_2_zero[x, (rho-1)*no_col + j] for j = y_tru+1:no_col; init=1))*

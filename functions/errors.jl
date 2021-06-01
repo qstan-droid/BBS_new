@@ -99,7 +99,7 @@ function error_prep(loss, dephase, nu_l, xbasis)
     a_b = xbasis[4]
     n_b = xbasis[3]
 
-    E(x::Int64, phi, nu) = (((1 - exp(-nu))^(x/2))/(sqrt(factorial(big(x)))))*exp((-nu/2 + phi)*dense(n_b))*(a_b^x)
+    E(x::Int64, phi, nu) = (((1 - exp(-nu))^(x/2))/(sqrt(factorial(big(x)))))*exp((-nu/2 + phi*1im)*dense(n_b))*(a_b^x)
 
     row, col, sample_no = size(loss)
 
@@ -114,10 +114,6 @@ function error_prep(loss, dephase, nu_l, xbasis)
             end
         end
     end
-    println("xbasis_zero: ", xbasis[5])
-    println("err_prep_1: ", err_prep_1[1, 1, 1])
-    println(err_prep_1[1, 1, 1] - xbasis[5])
-    println(err_prep_2[1, 1, 1] - xbasis[6])
 
     return err_prep_1, err_prep_2
 end

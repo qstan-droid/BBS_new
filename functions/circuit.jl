@@ -52,21 +52,6 @@ function circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, d
     err_exp_1 = [err_exp_1_zero, err_exp_1_one, err_exp_1_zo, err_exp_1_oz]
     err_exp_2 = [err_exp_2_zero, err_exp_2_one, err_exp_2_zo, err_exp_2_oz]
 
-    println("loss_1: ", loss_1)
-    println("dephase_1: ", dephase_1)
-    println("err_exp_1_zero: ", err_exp_1_zero)
-    println("err_exp_1_one: ", err_exp_1_one)
-    println("err_exp_1_oz: ", err_exp_1_oz)
-    println("err_exp_1_zo: ", err_exp_1_zo)
-        
-    println("loss_2: ", loss_2)
-    println("dephase_2: ", dephase_2)
-    println("err_exp_2_zero: ", err_exp_2_zero)
-    println("err_exp_2_one: ", err_exp_2_one)
-    println("err_exp_2_oz: ", err_exp_2_oz)
-    println("err_exp_2_zo: ", err_exp_2_zo)
-    sleep(3600)
-
     ###################################################################################################
     # generate measurement samples
     samples_1 = 0
@@ -78,6 +63,10 @@ function circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, d
     samples_2, norms_2, meas_exp_zero_2, meas_exp_one_2, meas_exp_zo_2, meas_exp_oz_2 = measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, 2, measure, meas_exp_1, [xbasis_1, xbasis_2], N_ord, samples_1, norms_1, code, block_size, loss_norm_1, loss_norm_2)
     meas_exp_2 = [meas_exp_zero_2, meas_exp_one_2, meas_exp_zo_2, meas_exp_oz_2]
     
+    println(size(samples_1))
+    println(size(norms_1))
+    plot_samples(samples_1, norms_1, measure[1], 1)
+    plot_samples(samples_2, norms_2, measure[2], 2)
     println("passed measurement sampling")
 
     ###################################################################################################
