@@ -134,10 +134,23 @@ function max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis, measure
             part[3] = norm(tr(meas_ops_1*min_1)*tr(meas_ops_2*plus_2))
             part[4] = norm(tr(meas_ops_1*min_1)*tr(meas_ops_2*min_2))
         else
-            part[1] = norm(sum(tr(meas_ops_1*(A(j, 0)*plus_1*dagger(A(j, 0))))*tr(meas_ops_2*(B(0, j)*plus_2*dagger(B(0, j)))) for j = 0:100))
-            part[2] = norm(sum(tr(meas_ops_1*(A(j, 0)*plus_1*dagger(A(j, 0))))*tr(meas_ops_2*(B(0, j)*min_2*dagger(B(0, j)))) for j = 0:100))
-            part[3] = norm(sum(tr(meas_ops_1*(A(j, 0)*min_1*dagger(A(j, 0))))*tr(meas_ops_2*(B(0, j)*plus_2*dagger(B(0, j)))) for j = 0:100))
-            part[4] = norm(sum(tr(meas_ops_1*(A(j, 0)*min_1*dagger(A(j, 0))))*tr(meas_ops_2*(B(0, j)*min_2*dagger(B(0, j)))) for j = 0:100))
+            # precompute the traces
+            A_plus = zeros(Complex{Float64}, 101)
+            A_min = zeros(Complex{Float64}, 101)
+            B_plus = zeros(Complex{Float64}, 101)
+            B_min = zeros(Complex{Float64}, 101)
+
+            for j = 0:100
+                A_plus[j+1] = tr(meas_ops_1*(A(j, 0)*plus_1*dagger(A(j, 0))))
+                A_min[j+1] = tr(meas_ops_1*(A(j, 0)*min_1*dagger(A(j, 0))))
+                B_plus[j+1] = tr(meas_ops_2*(B(0, j)*plus_2*dagger(B(0, j))))
+                B_min[j+1] = tr(meas_ops_2*(B(0, j)*min_2*dagger(B(0, j))))
+            end
+
+            part[1] = norm(sum(A_plus[j]*B_plus[j] for j = 1:101))
+            part[2] = norm(sum(A_plus[j]*B_min[j] for j = 1:101))
+            part[3] = norm(sum(A_min[j]*B_plus[j] for j = 1:101))
+            part[4] = norm(sum(A_min[j]*B_min[j] for j = 1:101))
         end
 
         max_index = findmax(part)[2]
