@@ -60,28 +60,33 @@ function measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block
 
     meas_exp = [meas_exp_plus, meas_exp_min, meas_exp_pm, meas_exp_mp]
 
+    # acceptance fraction
+    no_of_times_list = zeros(Complex{Float64}, row, col, sample_no)
+
     for k = 1:sample_no
         for i = 1:row
             for j = 1:col
-                samples[i, j, k], norms[i, j, k], meas_exp[1][i, j, k], meas_exp[2][i, j, k], meas_exp[3][i, j, k], meas_exp[4][i, j, k] = rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, xbasis, N_ord, samples, samples_1, code, block_size, meas_ops, meas_exp, [i, j, k], meas_exp_1, norms, norms_1, loss_norm_1[:, :, k], loss_norm_2[:, :, k])
+                samples[i, j, k], norms[i, j, k], meas_exp[1][i, j, k], meas_exp[2][i, j, k], meas_exp[3][i, j, k], meas_exp[4][i, j, k], no_of_times_list[i, j, k] = rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, xbasis, N_ord, samples, samples_1, code, block_size, meas_ops, meas_exp, [i, j, k], meas_exp_1, norms, norms_1, loss_norm_1[:, :, k], loss_norm_2[:, :, k])
             end
         end
     end
 
-    return samples, norms, meas_exp[1], meas_exp[2], meas_exp[3], meas_exp[4]
+    return samples, norms, meas_exp[1], meas_exp[2], meas_exp[3], meas_exp[4], no_of_times_list
 end
 
 function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, xbasis, N_ord, samples, samples_1, code, block_size, meas_ops, meas_exp, loc, meas_exp_1, norms, norms_1, loss_norm_1, loss_norm_2)
 
     # find the envelope constant function
     #ceil_constant = find_max_dist(block_size, block_no, measure_type, meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, xbasis[block_no], code, loc)*1.1
-    ceil_constant = 0.3
+    ceil_constant = 0.35
     counter = false
 
     # unpack loc
     x = loc[1]
     y = loc[2]
     z = loc[3]
+
+    no_of_times = 0
 
     if block_no == 1
         while counter == false
@@ -99,10 +104,10 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
                 println("goes above one: ", abs(f_x))
             else
                 if u < abs(f_x)
-                    #println(samples[x, y, z])
+                    no_of_times += 1
                     counter = true
                 else 
-                    #println("rejected: ", samples[x, y, z])
+                    no_of_times += 1
                 end
             end
         end
@@ -123,9 +128,11 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
                 println("goes above one: ", abs(f_x))
             else
                 if u < abs(f_x)
+                    no_of_times += 1
                     counter = true
                 else
-                    #println("rejected: ", samples[x, y, z])
+                    println(abs(f_x))
+                    no_of_times += 1
                 end
             end
         end
@@ -133,7 +140,7 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
 
     norms[x, y, z] = f_x
 
-    return samples[x, y, z], norms[x, y, z], meas_exp[1][x, y, z], meas_exp[2][x, y, z], meas_exp[3][x, y, z], meas_exp[4][x, y, z]
+    return samples[x, y, z], norms[x, y, z], meas_exp[1][x, y, z], meas_exp[2][x, y, z], meas_exp[3][x, y, z], meas_exp[4][x, y, z], 1/no_of_times
 end
 
 function sample_generator(code, meas_type, xbasis)

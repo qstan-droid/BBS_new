@@ -1,0 +1,16 @@
+#!/bin/bash
+
+#PBS -P bacon
+#PBS -N three_mode_no_error
+#PBS -l select=1:ncpus=1:mem=1gb
+#PBS -l walltime=12:00:00
+#PBS -J 1-100
+#PBS -o log_three_mode_no_error/log_output_^array_index^
+#PBS -e log_three_mode_no_error/log_error_^array_index^
+
+cd "$PBS_O_WORKDIR"
+
+mkdir "data_$PBS_JOBNAME"
+
+module load julia
+julia main.jl $PBS_ARRAY_INDEX $PBS_JOBNAME

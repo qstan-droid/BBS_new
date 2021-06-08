@@ -41,7 +41,7 @@ for i = 1:length(x)
     append!(fid_list, fid_list_temp)
 end
 
-ARGS = ["opt_phase", "max_(-1)"]
+ARGS = ["heterodyne", "three_mode_no_error"]
 
 # now we save onto a folder
 #open("parameters.txt", "w") do file

@@ -117,7 +117,7 @@ function max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis, measure
             exp(-1im*(p2*pi/(N_ord_1*N_ord_2))*dense(n_b_2))
         end
     else
-        B = function(p1, p2) 
+        B = function(p1, p2)
             (((1-exp(-nu_loss_2))^(p1/2))/sqrt(factorial(big(p1))))*exp(-nu_loss_2*dense(n_b_2)/2)*a_b_2^p1
         end
     end

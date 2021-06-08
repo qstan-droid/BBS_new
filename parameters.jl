@@ -1,18 +1,18 @@
 # number of samples
-sample_no = 1000
+sample_no = 10
 # type of measurement
-measure = ["opt_phase", "opt_phase"]
+measure = ["heterodyne", "heterodyne"]
 
 # note the invariable parameters of code
 code = ["binomial", "binomial"]
-block_size = [1, 1, 1] # row, col, rep
+block_size = [1, 3, 3] # row, col, rep
 N_ord = [3, 1]
 
 # define what errors are, how strong and where they're applied
 # error_placement = [loss on block_1, dephase on block_1, loss on block_2, dephase on block_2]
 # error_info = [nu_loss_1, nu_dephase_1, nu_loss_2, nu_dephase_2]
-err_place = [true, false, false, false]
-err_info = [0.1, 0.0, 0.0, 0.0]
+err_place = [false, false, false, false]
+err_info = [0.0, 0.0, 0.0, 0.0]
 
 # choose to vary alpha or bias
 x_var = "alpha"
@@ -41,4 +41,4 @@ end
 
 # how to decode
 # decoder_type = naive, bias, ave_max_like, max_likelihood
-decode_type = "max_likelihood"
+decode_type = "naive"
