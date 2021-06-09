@@ -66,8 +66,8 @@ function circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, d
         samples_2, norms_2, meas_exp_zero_2, meas_exp_one_2, meas_exp_zo_2, meas_exp_oz_2, no_of_times_list_2 = measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, 2, measure, meas_exp_1, [xbasis_1, xbasis_2], N_ord, samples_1, norms_1, code, block_size, loss_norm_1, loss_norm_2)
         meas_exp_2 = [meas_exp_zero_2, meas_exp_one_2, meas_exp_zo_2, meas_exp_oz_2]
     end
-    # println("acceptance probability 1: ", sum(no_of_times_list_1)/sample_no)
-    # println("acceptance probability 2: ", sum(no_of_times_list_2)/sample_no)
+    println("acceptance probability 1: ", sum(no_of_times_list_1)/sample_no)
+    println("acceptance probability 2: ", sum(no_of_times_list_2)/sample_no)
     
     ###################################################################################################
     # Thus comes decoding

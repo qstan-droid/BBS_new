@@ -78,7 +78,7 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
 
     # find the envelope constant function
     #ceil_constant = find_max_dist(block_size, block_no, measure_type, meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, xbasis[block_no], code, loc)*1.1
-    ceil_constant = 0.35
+    ceil_constant = 0.15
     counter = false
 
     # unpack loc
@@ -98,6 +98,7 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
 
             # sample a random number between 1 and max
             u = rand(Uniform(0, ceil_constant))
+            #u = rand()
 
             # check if condition is true
             if abs(f_x) > ceil_constant
@@ -113,6 +114,7 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
         end
 
     elseif block_no == 2
+        #println("qubit we are sampling is | row: ", x, " | col: ", y, " | sample_no: ", z)
         while counter == false
             # sample a measurement
             samples[x, y, z] = sample_generator(code[2], measure_type[2], xbasis[2])
@@ -122,6 +124,7 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
 
             # sample a random number
             u = rand(Uniform(0, ceil_constant))
+            #u = rand()
 
             # condition
             if abs(f_x) > ceil_constant
@@ -131,7 +134,7 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
                     no_of_times += 1
                     counter = true
                 else
-                    println(abs(f_x))
+                    #println(abs(f_x))
                     no_of_times += 1
                 end
             end
@@ -151,7 +154,7 @@ function sample_generator(code, meas_type, xbasis)
         elseif code == "binomial"
             edge = abs(convert(Integer, round(sqrt(xbasis[8]))))
         end
-        overflow = 1.5
+        overflow = 3
 
         # sample over a circle for lesser surface area
         rad = rand(Uniform(0, edge + overflow))

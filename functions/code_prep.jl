@@ -44,6 +44,7 @@ function find_dim(code, alpha, N_ord)
             dim = 10
         else
             dim = convert(Int64, round(2*alpha^2 + alpha, digits=0))
+            dim = 20
         end
     elseif code == "binomial"
         dim = (alpha)*(N_ord)
