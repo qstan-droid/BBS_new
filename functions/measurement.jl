@@ -78,7 +78,7 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
 
     # find the envelope constant function
     #ceil_constant = find_max_dist(block_size, block_no, measure_type, meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, xbasis[block_no], code, loc)*1.1
-    ceil_constant = 0.15
+    ceil_constant = 0.5
     counter = false
 
     # unpack loc

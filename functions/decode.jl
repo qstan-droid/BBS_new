@@ -63,8 +63,6 @@ function max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis, measure
     part = zeros(4)
     row, col, sample_no = size(samples_1)
 
-    println(sample_no)
-
     xbasis_1 = xbasis[1]
     xbasis_2 = xbasis[2]
 
@@ -102,7 +100,7 @@ function max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis, measure
 
     # Loss kraus operators
     if nu_loss_2 != 0
-        A = function(p1, p2) 
+        A = function(p1, p2)
             (((1-exp(-nu_loss_1))^(p1/2))/sqrt(factorial(big(p1))))*exp(-nu_loss_1*dense(n_b_1)/2)*a_b_1^p1 * exp(-1im*(p2*pi/(N_ord_1*N_ord_2))*dense(n_b_2))
         end
     else
@@ -122,11 +120,38 @@ function max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis, measure
         end
     end
 
+    # prepare the superoperator version of the loss channel applied to all the states
+    #sigma = [tensor(plus_1, plus_2), tensor(plus_1, min_2), tensor(min_1, plus_2), tensor(min_1, min_2)]
+    #l_max = 50
+    #sigma_prep = []
+
+    #for i = 1:4
+    #    push!(sigma_prep, sum(spre for l = 0:l_max))
+    #end
+
     # find all likelihoods and choose the max
 
+    # prepare the errored state
+    lmax = 50 # channel limit
+
     for i = collect(1:sample_no)
+        
         meas_ops_1 = meas_ops[1](samples_1[i])
         meas_ops_2 = meas_ops[2](samples_2[i])
+        #meas_ops_comb = tensor(meas_ops_1, meas_ops_2)
+
+        A_prep_plus = [] 
+        A_prep_min = []
+        B_prep_plus = []
+        B_prep_min = []
+
+        for j = 0:lmax
+            push!(A_prep_plus, tr(meas_ops_1*A(j, 0)*plus_1*dagger(A(j, 0)))) 
+            push!(A_prep_min, tr(meas_ops_1*A(j, 0)*min_1*dagger(A(j, 0))))
+
+            push!(B_prep_plus, tr(meas_ops_2*B(0, j)*plus_2*dagger(B(0, j)))) 
+            push!(B_prep_min, tr(meas_ops_2*B(0, j)*min_2*dagger(B(0, j))))
+        end
 
         if nu_loss_1 == 0.0 && nu_loss_2 == 0.0
             part[1] = norm(tr(meas_ops_1*plus_1)*tr(meas_ops_2*plus_2))
@@ -134,37 +159,29 @@ function max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis, measure
             part[3] = norm(tr(meas_ops_1*min_1)*tr(meas_ops_2*plus_2))
             part[4] = norm(tr(meas_ops_1*min_1)*tr(meas_ops_2*min_2))
         else
-            # precompute the traces
-            A_plus = zeros(Complex{Float64}, 101)
-            A_min = zeros(Complex{Float64}, 101)
-            B_plus = zeros(Complex{Float64}, 101)
-            B_min = zeros(Complex{Float64}, 101)
-
-            for j = 0:100
-                A_plus[j+1] = tr(meas_ops_1*(A(j, 0)*plus_1*dagger(A(j, 0))))
-                A_min[j+1] = tr(meas_ops_1*(A(j, 0)*min_1*dagger(A(j, 0))))
-                B_plus[j+1] = tr(meas_ops_2*(B(0, j)*plus_2*dagger(B(0, j))))
-                B_min[j+1] = tr(meas_ops_2*(B(0, j)*min_2*dagger(B(0, j))))
-            end
-
-            part[1] = norm(sum(A_plus[j]*B_plus[j] for j = 1:101))
-            part[2] = norm(sum(A_plus[j]*B_min[j] for j = 1:101))
-            part[3] = norm(sum(A_min[j]*B_plus[j] for j = 1:101))
-            part[4] = norm(sum(A_min[j]*B_min[j] for j = 1:101))
+            part[1] = norm(sum(A_prep_plus[j]*B_prep_plus[j] for j = 1:lmax+1))
+            part[2] = norm(sum(A_prep_plus[j]*B_prep_min[j] for j = 1:lmax+1))
+            part[3] = norm(sum(A_prep_min[j]*B_prep_plus[j] for j = 1:lmax+1))
+            part[4] = norm(sum(A_prep_min[j]*B_prep_min[j] for j = 1:lmax+1))
         end
 
         max_index = findmax(part)[2]
 
+        println(part)
         if max_index == 1
+            println("1")
             maj_1[i] = true
             maj_2[i] = true
         elseif max_index == 2
+            println("2")
             maj_1[i] = true
             maj_2[i] = false
         elseif max_index == 3
+            println("3")
             maj_1[i] = false
             maj_2[i] = true
         elseif max_index == 4
+            println("4")
             maj_1[i] = false
             maj_2[i] = false
         end
