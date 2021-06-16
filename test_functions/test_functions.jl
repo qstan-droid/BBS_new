@@ -67,7 +67,7 @@ end
 
 function initial_plotting(ave_fid, ave_fid_SE, x)
     
-    p = plot(x, ave_fid, yerr = ave_fid_SE)
+    p = plot(x, 1 .- ave_fid, yerr = ave_fid_SE, yaxis = :log)
     display(p)
     return p
 end

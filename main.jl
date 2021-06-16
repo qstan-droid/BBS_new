@@ -42,7 +42,7 @@ for i = 1:length(x)
     push!(fid_list, fid_list_temp)
 end
 
-ARGS = ["heterodyne", "test"]
+ARGS = ["heterodyne", "max_no_corr"]
 
 # now we save onto a folder
 #open("parameters.txt", "w") do file

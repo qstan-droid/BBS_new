@@ -49,14 +49,14 @@ function error_propagation(loss_1, dephase_1, loss_2, dephase_2, block, N_ord, s
             # do the spread from block 1 to block 2
             for j = 1:m
                 for k = 1:no_rep
-                    dephase_2[i, m*(k - 1)+j, l] = dephase_2[i, m*(k - 1)+j, l] + pi*loss_1[i, j, l]/(N_ord[1]*N_ord[2])
+                    dephase_2[i, m*(k - 1)+j, l] = dephase_2[i, m*(k - 1)+j, l] - pi*loss_1[i, j, l]/(N_ord[1]*N_ord[2])
                 end
             end
 
             # then do spread from block 2 to block 1
             for j = 1:m
                 for k = 1:no_rep
-                    dephase_1[i, j, l] = dephase_1[i, j, l] + pi*loss_2[i, m*(k - 1)+j, l]/(N_ord[1]*N_ord[2])
+                    dephase_1[i, j, l] = dephase_1[i, j, l] - pi*loss_2[i, m*(k - 1)+j, l]/(N_ord[1]*N_ord[2])
                 end
             end
         end
@@ -99,7 +99,7 @@ function error_prep(loss, dephase, nu_l, xbasis)
     a_b = xbasis[4]
     n_b = xbasis[3]
 
-    E(x::Int64, phi, nu) = (((1 - exp(-nu))^(x/2))/(sqrt(factorial(big(x)))))*exp((-nu/2 - phi*1im)*dense(n_b))*(a_b^x)
+    E(x::Int64, phi, nu) = (((1 - exp(-nu))^(x/2))/(sqrt(factorial(big(x)))))*exp((-nu/2 + phi*1im)*dense(n_b))*(a_b^x)
 
     row, col, sample_no = size(loss)
 

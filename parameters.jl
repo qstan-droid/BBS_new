@@ -11,8 +11,8 @@ N_ord = [3, 1]
 # define what errors are, how strong and where they're applied
 # error_placement = [loss on block_1, dephase on block_1, loss on block_2, dephase on block_2]
 # error_info = [nu_loss_1, nu_dephase_1, nu_loss_2, nu_dephase_2]
-err_place = [true, false, false, false]
-err_info = [0.01, 0.0, 0.0, 0.0]
+err_place = [false, false, false, false]
+err_info = [0.0, 0.0, 0.0, 0.0]
 
 # choose to vary alpha or bias
 x_var = "alpha"
@@ -20,9 +20,9 @@ x_var = "alpha"
 if x_var == "alpha"
     bias = [0, 0]
 
-    x_min = 11
+    x_min = 1
     x_step = 1
-    x_max = 15
+    x_max = 10
 
     x = x_min:x_step:x_max
     # same alpha for both blocks
@@ -40,5 +40,5 @@ elseif x_var == "bias"
 end
 
 # how to decode
-# decoder_type = naive, bias, ave_max_like, max_likelihood
-decode_type = "max_likelihood"
+# decoder_type = naive, bias, ave_max_like, max_likelihood, max_likelihood_no_corr
+decode_type = "max_likelihood_no_corr"

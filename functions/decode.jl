@@ -35,6 +35,11 @@ function decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, 
 
         # Take the two samples and find the maximum likelihood
         outcomes_1, outcomes_2 = max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis, measure)
+    elseif decode_type == "max_likelihood_no_corr"
+
+        # like maximum likelihood but we average out the correlations between the measurements (should be faster?)
+        outcomes_1 = max_like_decoder_no_corr(samples_1, N_ord, err_info, xbasis, measure, 1)
+        outcomes_2 = max_like_decoder_no_corr(samples_2, N_ord, err_info, xbasis, measure, 2)
     end
 
     return outcomes_1, outcomes_2
@@ -59,7 +64,7 @@ function naive_decode(samples, N_ord, block_size, measure, bias)
     return samples_out
 end
 
-function max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis, measure)
+function max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis, measure, block_no)
     part = zeros(4)
     row, col, sample_no = size(samples_1)
 
@@ -140,25 +145,25 @@ function max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis, measure
         meas_ops_2 = meas_ops[2](samples_2[i])
         #meas_ops_comb = tensor(meas_ops_1, meas_ops_2)
 
-        A_prep_plus = [] 
-        A_prep_min = []
-        B_prep_plus = []
-        B_prep_min = []
-
-        for j = 0:lmax
-            push!(A_prep_plus, tr(meas_ops_1*A(j, 0)*plus_1*dagger(A(j, 0)))) 
-            push!(A_prep_min, tr(meas_ops_1*A(j, 0)*min_1*dagger(A(j, 0))))
-
-            push!(B_prep_plus, tr(meas_ops_2*B(0, j)*plus_2*dagger(B(0, j)))) 
-            push!(B_prep_min, tr(meas_ops_2*B(0, j)*min_2*dagger(B(0, j))))
-        end
-
         if nu_loss_1 == 0.0 && nu_loss_2 == 0.0
             part[1] = norm(tr(meas_ops_1*plus_1)*tr(meas_ops_2*plus_2))
             part[2] = norm(tr(meas_ops_1*plus_1)*tr(meas_ops_2*min_2))
             part[3] = norm(tr(meas_ops_1*min_1)*tr(meas_ops_2*plus_2))
             part[4] = norm(tr(meas_ops_1*min_1)*tr(meas_ops_2*min_2))
         else
+            A_prep_plus = [] 
+            A_prep_min = []
+            B_prep_plus = []
+            B_prep_min = []
+    
+            for j = 0:lmax
+                push!(A_prep_plus, tr(meas_ops_1*A(j, 0)*plus_1*dagger(A(j, 0)))) 
+                push!(A_prep_min, tr(meas_ops_1*A(j, 0)*min_1*dagger(A(j, 0))))
+    
+                push!(B_prep_plus, tr(meas_ops_2*B(0, j)*plus_2*dagger(B(0, j)))) 
+                push!(B_prep_min, tr(meas_ops_2*B(0, j)*min_2*dagger(B(0, j))))
+            end
+
             part[1] = norm(sum(A_prep_plus[j]*B_prep_plus[j] for j = 1:lmax+1))
             part[2] = norm(sum(A_prep_plus[j]*B_prep_min[j] for j = 1:lmax+1))
             part[3] = norm(sum(A_prep_min[j]*B_prep_plus[j] for j = 1:lmax+1))
@@ -183,6 +188,93 @@ function max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis, measure
     end
 
     return maj_1, maj_2
+end
+
+function max_like_decoder_no_corr(samples, N_ord, err_info, xbasis, measure, block_no)
+    part = zeros(2)
+    row, col, sample_no = size(samples)
+
+    # outcomes for majority
+    maj = zeros(Bool, (row, col, sample_no))
+
+    # N_ord unpacking
+    N_ord_1 = N_ord[1]
+    N_ord_2 = N_ord[2]
+
+    # Fock space operators
+    xbasis_1 = xbasis[1]
+    xbasis_2 = xbasis[2]
+
+    n_b_1 = xbasis_1[3]
+    a_b_1 = xbasis_1[4]
+
+    n_b_2 = xbasis_2[3]
+    a_b_2 = xbasis_2[4]
+
+    # prepare the states
+    plus_1 = tensor(xbasis_1[1], dagger(xbasis_1[1]))
+    min_1 = tensor(xbasis_1[2], dagger(xbasis_1[2]))
+
+    plus_2 = tensor(xbasis_2[1], dagger(xbasis_2[1]))
+    min_2 = tensor(xbasis_2[2], dagger(xbasis_2[2]))
+
+    # unpack error information
+    nu_loss_1 = err_info[1]
+    nu_dephase_1 = err_info[2]
+    nu_loss_2 = err_info[3]
+    nu_dephase_2 = err_info[4]
+
+    # prepare Kraus operators
+    if nu_loss_2 != 0
+        A = function(p1, p2)
+            (((1-exp(-nu_loss_1))^(p1/2))/sqrt(factorial(big(p1))))*exp(-nu_loss_1*dense(n_b_1)/2)*a_b_1^p1 * exp(-1im*(p2*pi/(N_ord_1*N_ord_2))*dense(n_b_2))
+        end
+    else
+        A = function(p1, p2) 
+            (((1-exp(-nu_loss_1))^(p1/2))/sqrt(factorial(big(p1))))*exp(-nu_loss_1*dense(n_b_1)/2)*a_b_1^p1
+        end
+    end
+
+    if nu_loss_1 != 0
+        B = function(p1, p2) 
+            (((1-exp(-nu_loss_2))^(p1/2))/sqrt(factorial(big(p1))))*exp(-1im*(p2*pi/(N_ord_1*N_ord_2))*dense(n_b_2))*exp(-nu_loss_2*dense(n_b_2)/2)*a_b_2^p1 
+            #exp(-1im*(p2*pi/(N_ord_1*N_ord_2))*dense(n_b_2))
+        end
+    else
+        B = function(p1, p2)
+            (((1-exp(-nu_loss_2))^(p1/2))/sqrt(factorial(big(p1))))*exp(-nu_loss_2*dense(n_b_2)/2)*a_b_2^p1
+        end
+    end
+
+    # prepare the state
+    lmax = 50
+    if block_no == 1
+        meas_op = measurement_operator(measure[1], xbasis[1], N_ord[1])
+        rho_A = (plus_2 + min_2)/sqrt(2)
+        rho_dash_plus = ptrace(sum(sum(tensor(A(i, j)*plus_1*dagger(A(i, j)), B(j, i)*rho_A*dagger(B(j, i)))  for j = 0:lmax) for i = 0:lmax), 2)
+        rho_dash_min = ptrace(sum(sum(tensor(A(i, j)*min_1*dagger(A(i, j)), B(j, i)*rho_A*dagger(B(j, i)))  for j = 0:lmax) for i = 0:lmax), 2)
+    elseif block_no == 2
+        meas_op = measurement_operator(measure[2], xbasis[2], N_ord[2])
+        rho_A = (plus_1 + min_1)/sqrt(2)
+        rho_dash_plus = ptrace(sum(sum(tensor(A(i, j)*rho_A*dagger(A(i, j)), B(j, i)*plus_2*dagger(B(j, i)))  for j = 0:lmax) for i = 0:lmax), 1)
+        rho_dash_min = ptrace(sum(sum(tensor(A(i, j)*rho_A*dagger(A(i, j)), B(j, i)*min_2*dagger(B(j, i)))  for j = 0:lmax) for i = 0:lmax), 1)
+    end
+
+    for i = 1:sample_no
+        meas_ops = meas_op(samples[i])
+        part[1] = tr(meas_ops*rho_dash_plus)
+        part[2] = tr(meas_ops*rho_dash_min)
+
+        max_index = findmax(part)[2]
+
+        if max_index == 1
+            maj[i] = true
+        elseif max_index == 2
+            maj[i] = false
+        end
+    end
+
+    return maj
 end
 
 #########################################################
