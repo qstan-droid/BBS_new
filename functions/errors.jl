@@ -70,7 +70,7 @@ end
 function loss_pdf(nu_l, k_l, xbasis)
     A = (((1 - exp(-nu_l))^(k_l/2))/sqrt(factorial(big(k_l))))*exp(-nu_l*dense(xbasis[3])/2)*xbasis[4]^k_l
 
-    ans = (dagger(A*xbasis[1])*A*xbasis[1] + dagger(A*xbasis[2])*A*xbasis[2])/2
+    ans = (dagger(A*xbasis[5])*A*xbasis[5] + dagger(A*xbasis[6])*A*xbasis[6])/2
     return ans
 end
 

@@ -1,5 +1,5 @@
 # number of samples
-sample_no = 10
+sample_no = 1000
 # type of measurement
 measure = ["opt_phase", "opt_phase"]
 
@@ -20,7 +20,7 @@ x_var = "alpha"
 if x_var == "alpha"
     bias = [0, 0]
 
-    x_min = 1
+    x_min = 11
     x_step = 1
     x_max = 15
 

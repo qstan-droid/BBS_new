@@ -14,6 +14,7 @@ samples_1 = []
 samples_2 = []
 fid_list = []
 ave_fid = zeros(Float64, length(x))
+ave_fid_SE = zeros(Float64, length(x))
 
 for i = 1:length(x)
 
@@ -23,25 +24,25 @@ for i = 1:length(x)
     @time begin
         if x_var == "alpha"
             if dif_alpha == false
-                ave_fid[i], fid_list_temp, samples_1_temp, samples_2_temp = circuit(code, N_ord, [x[i], x[i]], block_size, err_place, err_info, measure, decode_type, sample_no, bias)
+                ave_fid[i], fid_list_temp, samples_1_temp, samples_2_temp, ave_fid_SE[i] = circuit(code, N_ord, [x[i], x[i]], block_size, err_place, err_info, measure, decode_type, sample_no, bias)
             else
-                ave_fid[i], fid_list_temp, samples_1_temp, samples_2_temp = circuit(code, N_ord, [x[i], alpha_2], block_size, err_place, err_info, measure, decode_type, sample_no, bias)
+                ave_fid[i], fid_list_temp, samples_1_temp, samples_2_temp, ave_fid_SE[i] = circuit(code, N_ord, [x[i], alpha_2], block_size, err_place, err_info, measure, decode_type, sample_no, bias)
             end
         elseif x_var == "bias"
             if where_bias == 1
-                ave_fid[i], fid_list_temp, samples_1_temp, samples_2_temp = circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, decode_type, sample_no, [x[i], 0])
+                ave_fid[i], fid_list_temp, samples_1_temp, samples_2_temp, ave_fid_SE[i] = circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, decode_type, sample_no, [x[i], 0])
             elseif where_bias == 2
-                ave_fid[i], fid_list_temp, samples_1_temp, samples_2_temp = circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, decode_type, sample_no, [0, x[i]])
+                ave_fid[i], fid_list_temp, samples_1_temp, samples_2_temp, ave_fid_SE[i] = circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, decode_type, sample_no, [0, x[i]])
             end
         end
     end
 
     append!(samples_1, samples_1_temp)
     append!(samples_2, samples_2_temp)
-    append!(fid_list, fid_list_temp)
+    push!(fid_list, fid_list_temp)
 end
 
-ARGS = ["heterodyne", "three_mode_no_error"]
+ARGS = ["heterodyne", "test"]
 
 # now we save onto a folder
 #open("parameters.txt", "w") do file
@@ -86,7 +87,11 @@ end
 #p1_plus, p1_min = samples_plot(samples_1[sample_no*(spot - 1) + 1:sample_no*spot], N_ord[1], x[spot], measure[1], bias[1])
 #p2_plus, p2_min = samples_plot(samples_2[sample_no*(spot - 1) + 1:sample_no*spot], N_ord[2], x[spot], measure[2], bias[2])
 
+p = initial_plotting(ave_fid, ave_fid_SE, x)
+
+savefig(p, string("data_", ARGS[2], "/plot_", ARGS[1]))
 writedlm(string("data_", ARGS[2], "/", ARGS[1], ".csv"), ave_fid, ',')
+writedlm(string("data_", ARGS[2], "/fidelity_list_", ARGS[1], ".csv"), fid_list, ',')
 #savefig(p1_plus, "samples_1_plot_plus")
 #savefig(p1_min, "samples_1_plot_min")
 #savefig(p2_plus, "samples_2_plot_plus")

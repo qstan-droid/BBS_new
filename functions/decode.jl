@@ -167,21 +167,16 @@ function max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis, measure
 
         max_index = findmax(part)[2]
 
-        println(part)
         if max_index == 1
-            println("1")
             maj_1[i] = true
             maj_2[i] = true
         elseif max_index == 2
-            println("2")
             maj_1[i] = true
             maj_2[i] = false
         elseif max_index == 3
-            println("3")
             maj_1[i] = false
             maj_2[i] = true
         elseif max_index == 4
-            println("4")
             maj_1[i] = false
             maj_2[i] = false
         end

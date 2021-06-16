@@ -64,7 +64,7 @@ end
 ##################################################
 # Finds the average fidelity
 
-function fid_ave_func(outcomes_1, outcomes_2, P)
+function fid_ave_func(outcomes_1, outcomes_2, P, N_ord, x)
 
     # initialise the state
     b = SpinBasis(1//2)
@@ -76,31 +76,44 @@ function fid_ave_func(outcomes_1, outcomes_2, P)
     one = spindown(b)
 
     psi_ini = (tensor(zero, zero) + tensor(one, one))/sqrt(2)
-    psi_ini_dm = dm(psi_ini)
 
     row, col, sample_no = size(outcomes_1)
-    fid_list = zeros(Float64, sample_no)
+    fid_list = zeros(Float64, (sample_no, 1))
+    fid_gate_list = zeros(Float64, (sample_no, 1))
+
+    # N_ord
+    N_ord_1 = N_ord[1]
+    N_ord_2 = N_ord[2]
+
+    x_1 = x[1]
+    x_2 = x[2]
+
+    d = x_1*N_ord_1 + 1
 
     # outcomes print out
-
 
     for k = 1:sample_no
         psi_out = normalize((P[1, k]*psi_ini + P[2, k]*tensor(I_d, X_d)*psi_ini + P[3, k]*tensor(I_d, Z_d)*psi_ini + P[4, k]*tensor(I_d, X_d*Z_d)*psi_ini)/2)
 
         correction_no = 1
-
+        #println("outcomes_1: ", outcomes_1[k])
+        #println("outcomes_2: ", outcomes_2[k])
         if outcomes_1[k] == true && outcomes_2[k] == true
             correction = tensor(I_d, I_d)
             correction_no = 1
+            #println(correction_no)
         elseif outcomes_1[k] == true && outcomes_2[k] == false
             correction = tensor(I_d, X_d)
             correction_no = 2
+            #println(correction_no)
         elseif outcomes_1[k] == false && outcomes_2[k] == true
             correction = tensor(I_d, Z_d)
             correction_no = 3
+            #println(correction_no)
         elseif outcomes_1[k] == false && outcomes_2[k] == false
             correction = tensor(I_d, Z_d*X_d)
             correction_no = 4
+            #println(correction_no)
         end
 
         # note 
@@ -113,18 +126,42 @@ function fid_ave_func(outcomes_1, outcomes_2, P)
         
 
         psi_corr = correction*psi_out
-        psi_corr_dm = dm(psi_corr)
 
         # record fidelity
         #fid_list[k] = real(fidelity(psi_corr_dm, psi_ini_dm))^2
         fid_list[k] = norm(dagger(psi_ini)*psi_corr*dagger(psi_corr)*psi_ini)
+        fid_gate_list[k] = (d*fid_list[k] + 1)/(d + 1)
+
         #println("gives a fidelity of: ", fid_list[k])
 
     end
 
     # calculate average fidelity
     fid_ave = sum(fid_list)/sample_no
-    println("average_fid: ", fid_ave)
-    return fid_ave, fid_list
+    fid_gate_ave = sum(fid_gate_list)/sample_no
+    
+    # find the standard error
+    fid_SE = find_SE(fid_ave, fid_list)
+    fid_gate_SE = find_SE(fid_gate_ave, fid_gate_list)
+    
+    println("average fid: ", fid_ave)
+    println("standard error: ", fid_SE)
+    println("---------------------------")
+    println("average gate fid: ", fid_gate_ave)
+    println("standard error gate: ", fid_gate_SE)
+    return fid_ave, fid_list, fid_SE
 end
+
 ##################################################
+################ STATISTICS TOOLS ################
+##################################################
+
+function find_SE(average, data)
+
+    n_size = length(data)
+
+    # find standard deviation
+    sd = sqrt(sum((data[j] - average)^2 for j = 1:n_size)/(n_size - 1))
+
+    return sd
+end

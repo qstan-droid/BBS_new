@@ -82,7 +82,7 @@ function circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, d
     # First we find the
     println("calculating fidelity...")
     P = find_coeff(block_size, samples_1, samples_2, xbasis_1, xbasis_2, err_prep_1, err_prep_2, measure, N_ord)
-    ave_fidelity, fid_list = fid_ave_func(outcomes_1, outcomes_2, P)
+    ave_fidelity, fid_list, SE = fid_ave_func(outcomes_1, outcomes_2, P, N_ord, alpha)
 
-    return ave_fidelity, fid_list, samples_1, samples_2
+    return ave_fidelity, fid_list, samples_1, samples_2, SE
 end
