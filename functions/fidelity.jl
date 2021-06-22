@@ -149,7 +149,7 @@ function fid_ave_func(outcomes_1, outcomes_2, P, N_ord, x)
     println("---------------------------")
     println("average gate fid: ", fid_gate_ave)
     println("standard error gate: ", fid_gate_SE)
-    return fid_ave, fid_list, fid_SE
+    return fid_ave, fid_list, fid_SE, fid_gate_ave, fid_gate_list, fid_gate_SE
 end
 
 ##################################################

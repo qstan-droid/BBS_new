@@ -1,4 +1,5 @@
 using Plots
+using StatsPlots
 
 # given a set of complex numbers, return complex plane picture
 function samples_plot(samples, N_ord, alpha, meas_type, bias)
@@ -64,10 +65,26 @@ function plot_samples(samples, norms, measure, block_no)
 end
 
 ####################################################
+# TEST PLOTTING #
 
 function initial_plotting(ave_fid, ave_fid_SE, x)
     
     p = plot(x, 1 .- ave_fid, yerr = ave_fid_SE, yaxis = :log)
     display(p)
     return p
+end
+
+function loss_hist(loss)
+    max = findmax(loss)[1]
+    hist = zeros(Int64, max+1)
+
+    println(max)
+    println(hist)
+
+    for i = 0:max
+        hist[i+1] = count(j->(j == i), loss)
+    end
+    println("we in bois")
+    display(histogram(vec(loss), normalize=true))
+    println(vec(hist) ./ 1000)
 end

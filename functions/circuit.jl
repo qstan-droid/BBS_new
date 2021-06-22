@@ -34,6 +34,19 @@ function circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, d
     println("propagating errors...")
     loss_1, dephase_1, loss_2, dephase_2 = error_propagation(loss_1, dephase_1, loss_2, dephase_2, block_size, N_ord, sample_no)
 
+    #println(vec(loss_1))
+    #println(vec(loss_2))
+    #println(vec(dephase_1))
+    #println(vec(dephase_2))
+
+    loss_hist(loss_1)
+
+    #println("loss_1: ", loss_1[:, :, :])
+    #println("loss_2: ", loss_2)
+    #println("----------------------------")
+    #println("dephase_1: ", dephase_1)
+    #println("dephase_2: ", dephase_2)
+
     # do measurements on both blocks
     # measure = [measure_type_1, measure_type_2]
 
@@ -82,7 +95,7 @@ function circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, d
     # First we find the
     println("calculating fidelity...")
     P = find_coeff(block_size, samples_1, samples_2, xbasis_1, xbasis_2, err_prep_1, err_prep_2, measure, N_ord)
-    ave_fidelity, fid_list, SE = fid_ave_func(outcomes_1, outcomes_2, P, N_ord, alpha)
+    ave_fidelity, fid_list, SE, ave_gate_fid, gate_fid_list, fid_gate_SE = fid_ave_func(outcomes_1, outcomes_2, P, N_ord, alpha)
 
-    return ave_fidelity, fid_list, samples_1, samples_2, SE
+    return ave_fidelity, ave_gate_fid, fid_list, gate_fid_list, samples_1, samples_2, SE, fid_gate_SE
 end

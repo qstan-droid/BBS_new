@@ -64,7 +64,7 @@ function naive_decode(samples, N_ord, block_size, measure, bias)
     return samples_out
 end
 
-function max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis, measure, block_no)
+function max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis, measure)
     part = zeros(4)
     row, col, sample_no = size(samples_1)
 
@@ -106,20 +106,25 @@ function max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis, measure
     # Loss kraus operators
     if nu_loss_2 != 0
         A = function(p1, p2)
-            (((1-exp(-nu_loss_1))^(p1/2))/sqrt(factorial(big(p1))))*exp(-nu_loss_1*dense(n_b_1)/2)*a_b_1^p1 * exp(-1im*(p2*pi/(N_ord_1*N_ord_2))*dense(n_b_2))
+            (((1-exp(-nu_loss_1))^(p1/2))/sqrt(factorial(big(p1))))*exp(-(nu_loss_1/2 + 1im*(p2*pi/(N_ord_1*N_ord_2)))*dense(n_b_1))*a_b_1^p1
+            
         end
+        println("A1")
     else
         A = function(p1, p2) 
             (((1-exp(-nu_loss_1))^(p1/2))/sqrt(factorial(big(p1))))*exp(-nu_loss_1*dense(n_b_1)/2)*a_b_1^p1
         end
+        println("A2")
     end
 
     if nu_loss_1 != 0
+        println("B1")
         B = function(p1, p2) 
             #(((1-exp(-nu_loss_2))^(p1/2))/sqrt(factorial(big(p1))))*exp(-nu_loss_2*dense(n_b_2)/2)*a_b_2^p1 * exp(-1im*(p2*pi/(N_ord_1*N_ord_2))*dense(n_b_2))
             exp(-1im*(p2*pi/(N_ord_1*N_ord_2))*dense(n_b_2))
         end
     else
+        println("B2")
         B = function(p1, p2)
             (((1-exp(-nu_loss_2))^(p1/2))/sqrt(factorial(big(p1))))*exp(-nu_loss_2*dense(n_b_2)/2)*a_b_2^p1
         end
