@@ -20,9 +20,9 @@ x_var = "alpha"
 if x_var == "alpha"
     bias = [0, 0]
 
-    x_min = 1
+    x_min = 10
     x_step = 1
-    x_max = 5
+    x_max = 11
 
     x = x_min:x_step:x_max
     # same alpha for both blocks

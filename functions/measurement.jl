@@ -77,8 +77,8 @@ end
 function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, xbasis, N_ord, samples, samples_1, code, block_size, meas_ops, meas_exp, loc, meas_exp_1, norms, norms_1, loss_norm_1, loss_norm_2)
 
     # find the envelope constant function
-    #ceil_constant = find_max_dist(block_size, block_no, measure_type, meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, xbasis[block_no], code, loc)*1.1
-    ceil_constant = 0.5
+    ceil_constant = 1.1*find_max_dist(block_size, block_no, measure_type, meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, xbasis[block_no], code, loc, loss_norm_1, loss_norm_2)
+    #ceil_constant = 0.5
     counter = false
 
     # unpack loc
@@ -299,7 +299,7 @@ end
 
 #######################
 # useless for now
-function find_max_dist(block_size, block_no, meas_type, meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, xbasis, code, loc)
+function find_max_dist(block_size, block_no, meas_type, meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, xbasis, code, loc, loss_norm_1, loss_norm_2)
 
     #######
     # prepare a samples range
@@ -331,13 +331,13 @@ function find_max_dist(block_size, block_no, meas_type, meas_ops, err_prep_1, er
     if block_no == 1
         if meas_type == "heterodyne"
             row_range, col_range = size(samples_range)
-            global heights = zeros(row_range, col_range)
-            global norms = zeros(row_range, col_range)
+            heights = zeros(row_range, col_range)
+            norms = zeros(row_range, col_range)
 
             for i = 1:row_range
                 for j = 1:col_range
                     meas_exp[1][loc[1], loc[2], loc[3]], meas_exp[2][loc[1], loc[2], loc[3]], meas_exp[3][loc[1], loc[2], loc[3]], meas_exp[4][loc[1], loc[2], loc[3]] = meas_exp(meas_ops[1], samples_range[i, j], err_prep_1[1][loc[1], loc[2], loc[3]], err_prep_1[2][loc[1], loc[2], loc[3]])
-                    heights[i, j] = pdf_1(meas_exp, err_exp_1, err_exp_2, norms, loc, block_size)
+                    heights[i, j] = abs(pdf_1(meas_exp, err_exp_1, err_exp_2, norms, loc, block_size, loss_norm_1, loss_norm_2))
                 end
             end
 
@@ -346,19 +346,19 @@ function find_max_dist(block_size, block_no, meas_type, meas_ops, err_prep_1, er
 
             for i = 1:length(samples_range)
                 meas_exp[1][loc[1], loc[2], loc[3]], meas_exp[2][loc[1], loc[2], loc[3]], meas_exp[3][loc[1], loc[2], loc[3]], meas_exp[4][loc[1], loc[2], loc[3]] = meas_exp(meas_ops[1], samples_range[i, j], err_prep_1[1][loc[1], loc[2], loc[3]], err_prep_1[2][loc[1], loc[2], loc[3]])
-                heights[i] = pdf_1(meas_exp, err_exp_1, err_exp_2, norms, loc, block_size)
+                heights[i] = abs(pdf_1(meas_exp, err_exp_1, err_exp_2, norms, loc, block_size, loss_norm_1, loss_norm_2))
             end
         end
     elseif block_no == 2
         if meas_type == "heterodyne"
             row_range, col_range = size(samples_range)
-            global heights = zeros(row_range, col_range)
-            global norms = zeros(row_range, col_range)
+            heights = zeros(row_range, col_range)
+            norms = zeros(row_range, col_range)
 
             for i = 1:row_range
                 for j = 1:col_range
                     meas_exp[1][loc[1], loc[2], loc[3]], meas_exp[2][loc[1], loc[2], loc[3]], meas_exp[3][loc[1], loc[2], loc[3]], meas_exp[4][loc[1], loc[2], loc[3]] = meas_exp(meas_ops[2], samples_range[i, j], err_prep_2[1][loc[1], loc[2], loc[3]], err_prep_2[2][loc[1], loc[2], loc[3]])
-                    heights[i, j] = pdf_2(meas_exp_1, meas_exp, err_exp_2, norms, norms_1, loc, block_size)
+                    heights[i, j] = abs(pdf_2(meas_exp_1, meas_exp, err_exp_2, norms, norms_1, loc, block_size, loss_norm_1, loss_norm_2))
                 end
             end
 
@@ -366,7 +366,7 @@ function find_max_dist(block_size, block_no, meas_type, meas_ops, err_prep_1, er
             heights = zeros(length(samples_range))
 
             for i = 1:length(samples_range)
-                heights[i] = pdf_2()
+                heights[i] = abs(pdf_2(meas_exp_1, meas_exp, err_exp_2, norms, norms_1, loc, block_size, loss_norm_1, loss_norm_2))
             end
         end
     end

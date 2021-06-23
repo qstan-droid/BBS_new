@@ -48,7 +48,7 @@ for i = 1:length(x)
     push!(gate_fid_list, gate_fid_list_temp)
 end
 
-ARGS = ["heterodyne", "ml_0.01"]
+ARGS = ["het", "tm_no_err"]
 
 # now we save onto a folder
 #open("parameters.txt", "w") do file
