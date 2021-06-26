@@ -1,5 +1,6 @@
 # number of samples
-sample_no = 10000
+sample_no = 1000
+
 # type of measurement
 measure = ["opt_phase", "opt_phase"]
 

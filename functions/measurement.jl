@@ -77,7 +77,7 @@ end
 function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, xbasis, N_ord, samples, samples_1, code, block_size, meas_ops, meas_exp, loc, meas_exp_1, norms, norms_1, loss_norm_1, loss_norm_2)
 
     # find the envelope constant function
-    ceil_constant = find_max_dist(block_size, block_no, measure_type[block_no], meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, xbasis[block_no], code[block_no], loc, loss_norm_1, loss_norm_2)*1.1
+    ceil_constant = abs(find_max_dist(block_size, block_no, measure_type[block_no], meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, xbasis[block_no], code[block_no], loc, loss_norm_1, loss_norm_2, norms, norms_1))*1.1
     #ceil_constant = 0.5
     counter = false
 
@@ -123,8 +123,8 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
             global f_x = pdf_2(meas_exp_1, meas_exp, err_exp_2, norms, norms_1, loc, block_size, loss_norm_1, loss_norm_2)
 
             # sample a random number
+            println(ceil_constant)
             u = rand(Uniform(0, ceil_constant))
-            #u = rand()
 
             # condition
             if abs(f_x) > ceil_constant
@@ -299,7 +299,7 @@ end
 
 #######################
 # useless for now
-function find_max_dist(block_size, block_no, meas_type, meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, xbasis, code, loc, loss_norm_1, loss_norm_2)
+function find_max_dist(block_size, block_no, meas_type, meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, xbasis, code, loc, loss_norm_1, loss_norm_2, norms, norms_1)
 
     #######
     # prepare a samples range
@@ -334,7 +334,6 @@ function find_max_dist(block_size, block_no, meas_type, meas_ops, err_prep_1, er
         if meas_type == "heterodyne"
             row_range, col_range = size(samples_range)
             global heights = zeros(row_range, col_range)
-            global norms = zeros(row_range, col_range)
 
             for i = 1:row_range
                 for j = 1:col_range
@@ -342,7 +341,6 @@ function find_max_dist(block_size, block_no, meas_type, meas_ops, err_prep_1, er
                     heights[i, j] = pdf_1(meas_exp, err_exp_1, err_exp_2, norms, loc, block_size, loss_norm_1, loss_norm_2)
                 end
             end
-            println(heights)
 
         elseif meas_type == "opt_phase"
             global heights = zeros(length(samples_range))
@@ -356,7 +354,6 @@ function find_max_dist(block_size, block_no, meas_type, meas_ops, err_prep_1, er
         if meas_type == "heterodyne"
             row_range, col_range = size(samples_range)
             global heights = zeros(row_range, col_range)
-            global norms = zeros(row_range, col_range)
 
             for i = 1:row_range
                 for j = 1:col_range

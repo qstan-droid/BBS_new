@@ -34,12 +34,7 @@ function circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, d
     println("propagating errors...")
     loss_1, dephase_1, loss_2, dephase_2 = error_propagation(loss_1, dephase_1, loss_2, dephase_2, block_size, N_ord, sample_no)
 
-    #println(vec(loss_1))
-    #println(vec(loss_2))
-    #println(vec(dephase_1))
-    #println(vec(dephase_2))
-
-    loss_hist(loss_1)
+    #loss_hist(loss_1)
 
     #println("loss_1: ", loss_1[:, :, :])
     #println("loss_2: ", loss_2)
