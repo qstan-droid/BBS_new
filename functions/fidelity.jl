@@ -161,7 +161,7 @@ function find_SE(average, data)
     n_size = length(data)
 
     # find standard deviation
-    sd = sqrt(sum((data[j] - average)^2 for j = 1:n_size)/(n_size - 1))
+    sd = sqrt(sum((data[j] - average)^2 for j = 1:n_size)/(n_size))
 
-    return sd
+    return sd/sqrt(n_size)
 end

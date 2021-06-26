@@ -48,7 +48,7 @@ for i = 1:length(x)
     push!(gate_fid_list, gate_fid_list_temp)
 end
 
-ARGS = ["heterodyne", "ml_0.01"]
+ARGS = ["opt", "ml_0.01_v2"]
 
 # now we save onto a folder
 #open("parameters.txt", "w") do file
@@ -100,9 +100,12 @@ writedlm(string("data_", ARGS[2], "/SE_", ARGS[1], ".csv"), ave_fid_SE, ',')
 writedlm(string("data_", ARGS[2], "/gate_", ARGS[1], ".csv"), ave_gate_fid, ',')
 writedlm(string("data_", ARGS[2], "/gate_fidelity_list_", ARGS[1], ".csv"), gate_fid_list, ',')
 writedlm(string("data_", ARGS[2], "/gate_SE_", ARGS[1], ".csv"), ave_gate_SE, ',')
-p = initial_plotting(ave_fid, ave_fid_SE, x)
 
-savefig(p, string("data_", ARGS[2], "/plot_", ARGS[1]))
+p_fid = initial_plotting(ave_fid, ave_fid_SE, x)
+p_gate = initial_plotting(ave_gate_fid, ave_gate_SE, x)
+
+savefig(p_fid, string("data_", ARGS[2], "/plot_fid_", ARGS[1]))
+savefig(p_gate, string("data_", ARGS[2], "/plot_gate_fid_", ARGS[1]))
 #savefig(p1_plus, "samples_1_plot_plus")
 #savefig(p1_min, "samples_1_plot_min")
 #savefig(p2_plus, "samples_2_plot_plus")

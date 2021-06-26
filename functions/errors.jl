@@ -70,7 +70,9 @@ end
 function loss_pdf(nu_l, k_l, xbasis)
     A = (((1 - exp(-nu_l))^(k_l/2))/sqrt(factorial(big(k_l))))*exp(-nu_l*dense(xbasis[3])/2)*xbasis[4]^k_l
 
-    ans = (dagger(A*xbasis[5])*A*xbasis[5] + dagger(A*xbasis[6])*A*xbasis[6])/2
+    #ans = (dagger(A*xbasis[5])*A*xbasis[5] + dagger(A*xbasis[6])*A*xbasis[6])/2
+    ans = dagger(A*xbasis[1])*A*xbasis[1]
+    
     return ans
 end
 
@@ -80,7 +82,7 @@ function discrete_loss_sampling(nu_l, xbasis)
     s = loss_pdf(nu_l, k, xbasis)
     n = rand(Uniform(0, 1))
 
-    while norm(s) < n
+    while abs(s) < n
         k = k + 1
         s = s + loss_pdf(nu_l, k, xbasis)
     end

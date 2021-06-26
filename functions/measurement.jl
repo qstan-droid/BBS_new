@@ -77,8 +77,8 @@ end
 function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_no, measure_type, xbasis, N_ord, samples, samples_1, code, block_size, meas_ops, meas_exp, loc, meas_exp_1, norms, norms_1, loss_norm_1, loss_norm_2)
 
     # find the envelope constant function
-    #ceil_constant = find_max_dist(block_size, block_no, measure_type, meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, xbasis[block_no], code, loc)*1.1
-    ceil_constant = 0.5
+    ceil_constant = find_max_dist(block_size, block_no, measure_type[block_no], meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, xbasis[block_no], code[block_no], loc, loss_norm_1, loss_norm_2)*1.1
+    #ceil_constant = 0.5
     counter = false
 
     # unpack loc
@@ -299,7 +299,7 @@ end
 
 #######################
 # useless for now
-function find_max_dist(block_size, block_no, meas_type, meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, xbasis, code, loc)
+function find_max_dist(block_size, block_no, meas_type, meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, xbasis, code, loc, loss_norm_1, loss_norm_2)
 
     #######
     # prepare a samples range
@@ -309,7 +309,7 @@ function find_max_dist(block_size, block_no, meas_type, meas_ops, err_prep_1, er
         elseif code == "binomial"
             edge = abs(convert(Integer, round(sqrt(xbasis[8]))))
         end
-        overflow = 1.5
+        overflow = 1.0
 
         # create a range of values
         rad_range = 0:0.1:(edge + overflow)
@@ -319,7 +319,7 @@ function find_max_dist(block_size, block_no, meas_type, meas_ops, err_prep_1, er
 
         for i = 1:length(rad_range)
             for j = 1:length(phi_range)
-                samples_range[i, j] = rad_range[i, j]*(cos(phi_range[i, j]) + sin(phi_range[i, j])*1im)
+                samples_range[i, j] = rad_range[i]*(cos(phi_range[j]) + sin(phi_range[j])*1im)
             end
         end
 
@@ -328,6 +328,8 @@ function find_max_dist(block_size, block_no, meas_type, meas_ops, err_prep_1, er
     end
 
     # find heights for every range and then choose the maximum
+
+
     if block_no == 1
         if meas_type == "heterodyne"
             row_range, col_range = size(samples_range)
@@ -336,17 +338,18 @@ function find_max_dist(block_size, block_no, meas_type, meas_ops, err_prep_1, er
 
             for i = 1:row_range
                 for j = 1:col_range
-                    meas_exp[1][loc[1], loc[2], loc[3]], meas_exp[2][loc[1], loc[2], loc[3]], meas_exp[3][loc[1], loc[2], loc[3]], meas_exp[4][loc[1], loc[2], loc[3]] = meas_exp(meas_ops[1], samples_range[i, j], err_prep_1[1][loc[1], loc[2], loc[3]], err_prep_1[2][loc[1], loc[2], loc[3]])
-                    heights[i, j] = pdf_1(meas_exp, err_exp_1, err_exp_2, norms, loc, block_size)
+                    meas_exp[1][loc[1], loc[2], loc[3]], meas_exp[2][loc[1], loc[2], loc[3]], meas_exp[3][loc[1], loc[2], loc[3]], meas_exp[4][loc[1], loc[2], loc[3]] = meas_exp_prep(meas_ops[1], samples_range[i, j], err_prep_1[1][loc[1], loc[2], loc[3]], err_prep_1[2][loc[1], loc[2], loc[3]])
+                    heights[i, j] = pdf_1(meas_exp, err_exp_1, err_exp_2, norms, loc, block_size, loss_norm_1, loss_norm_2)
                 end
             end
+            println(heights)
 
         elseif meas_type == "opt_phase"
-            heights = zeros(length(samples_range))
+            global heights = zeros(length(samples_range))
 
             for i = 1:length(samples_range)
-                meas_exp[1][loc[1], loc[2], loc[3]], meas_exp[2][loc[1], loc[2], loc[3]], meas_exp[3][loc[1], loc[2], loc[3]], meas_exp[4][loc[1], loc[2], loc[3]] = meas_exp(meas_ops[1], samples_range[i, j], err_prep_1[1][loc[1], loc[2], loc[3]], err_prep_1[2][loc[1], loc[2], loc[3]])
-                heights[i] = pdf_1(meas_exp, err_exp_1, err_exp_2, norms, loc, block_size)
+                meas_exp[1][loc[1], loc[2], loc[3]], meas_exp[2][loc[1], loc[2], loc[3]], meas_exp[3][loc[1], loc[2], loc[3]], meas_exp[4][loc[1], loc[2], loc[3]] = meas_exp_prep(meas_ops[1], samples_range[i], err_prep_1[1][loc[1], loc[2], loc[3]], err_prep_1[2][loc[1], loc[2], loc[3]])
+                heights[i] = pdf_1(meas_exp, err_exp_1, err_exp_2, norms, loc, block_size, loss_norm_1, loss_norm_2)
             end
         end
     elseif block_no == 2
@@ -357,16 +360,16 @@ function find_max_dist(block_size, block_no, meas_type, meas_ops, err_prep_1, er
 
             for i = 1:row_range
                 for j = 1:col_range
-                    meas_exp[1][loc[1], loc[2], loc[3]], meas_exp[2][loc[1], loc[2], loc[3]], meas_exp[3][loc[1], loc[2], loc[3]], meas_exp[4][loc[1], loc[2], loc[3]] = meas_exp(meas_ops[2], samples_range[i, j], err_prep_2[1][loc[1], loc[2], loc[3]], err_prep_2[2][loc[1], loc[2], loc[3]])
-                    heights[i, j] = pdf_2(meas_exp_1, meas_exp, err_exp_2, norms, norms_1, loc, block_size)
+                    meas_exp[1][loc[1], loc[2], loc[3]], meas_exp[2][loc[1], loc[2], loc[3]], meas_exp[3][loc[1], loc[2], loc[3]], meas_exp[4][loc[1], loc[2], loc[3]] = meas_exp_prep(meas_ops[2], samples_range[i, j], err_prep_2[1][loc[1], loc[2], loc[3]], err_prep_2[2][loc[1], loc[2], loc[3]])
+                    heights[i, j] = pdf_2(meas_exp_1, meas_exp, err_exp_2, norms, norms_1, loc, block_size, loss_norm_1, loss_norm_2)
                 end
             end
 
         elseif meas_type == "opt_phase"
-            heights = zeros(length(samples_range))
+            global heights = zeros(length(samples_range))
 
             for i = 1:length(samples_range)
-                heights[i] = pdf_2()
+                heights[i] = pdf_2(meas_exp_1, meas_exp, err_exp_2, norms, norms_1, loc, block_size, loss_norm_1, loss_norm_2)
             end
         end
     end

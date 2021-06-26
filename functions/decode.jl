@@ -267,8 +267,8 @@ function max_like_decoder_no_corr(samples, N_ord, err_info, xbasis, measure, blo
 
     for i = 1:sample_no
         meas_ops = meas_op(samples[i])
-        part[1] = tr(meas_ops*rho_dash_plus)
-        part[2] = tr(meas_ops*rho_dash_min)
+        part[1] = norm(tr(meas_ops*rho_dash_plus))
+        part[2] = norm(tr(meas_ops*rho_dash_min))
 
         max_index = findmax(part)[2]
 

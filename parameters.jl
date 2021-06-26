@@ -1,5 +1,5 @@
 # number of samples
-sample_no = 1000
+sample_no = 10000
 # type of measurement
 measure = ["opt_phase", "opt_phase"]
 
@@ -22,7 +22,7 @@ if x_var == "alpha"
 
     x_min = 1
     x_step = 1
-    x_max = 5
+    x_max = 15
 
     x = x_min:x_step:x_max
     # same alpha for both blocks
