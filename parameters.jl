@@ -21,9 +21,13 @@ x_var = "alpha"
 if x_var == "alpha"
     bias = [0, 0]
 
-    x_min = 1
+    x_min = 10
     x_step = 1
+<<<<<<< HEAD
     x_max = 15
+=======
+    x_max = 11
+>>>>>>> 414012639d43230f56107149aff8bda5bb6724b7
 
     x = x_min:x_step:x_max
     # same alpha for both blocks

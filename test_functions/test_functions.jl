@@ -78,13 +78,9 @@ function loss_hist(loss)
     max = findmax(loss)[1]
     hist = zeros(Int64, max+1)
 
-    println(max)
-    println(hist)
-
     for i = 0:max
         hist[i+1] = count(j->(j == i), loss)
     end
-    println("we in bois")
-    display(histogram(vec(loss), normalize=true))
+    display(histogram(vec(loss)))
     println(vec(hist) ./ 1000)
 end
