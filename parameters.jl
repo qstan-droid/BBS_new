@@ -2,7 +2,7 @@
 sample_no = 1000
 
 # type of measurement
-measure = ["opt_phase", "opt_phase"]
+measure = ["heterodyne", "heterodyne"]
 
 # note the invariable parameters of code
 code = ["binomial", "binomial"]
@@ -21,7 +21,7 @@ x_var = "alpha"
 if x_var == "alpha"
     bias = [0, 0]
 
-    x_min = 10
+    x_min = 1
     x_step = 1
     x_max = 15
 

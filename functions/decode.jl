@@ -195,6 +195,13 @@ function max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis, measure
     return maj_1, maj_2
 end
 
+function ml_decoder_new(samples_1, samples_2, N_ord, err_info, xbasis, measure)
+    
+    
+
+    return maj_1, maj_2
+end
+
 function max_like_decoder_no_corr(samples, N_ord, err_info, xbasis, measure, block_no)
     part = zeros(2)
     row, col, sample_no = size(samples)

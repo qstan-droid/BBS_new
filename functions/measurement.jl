@@ -78,7 +78,6 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
 
     # find the envelope constant function
     ceil_constant = abs(find_max_dist(block_size, block_no, measure_type[block_no], meas_ops, err_prep_1, err_prep_2, err_exp_1, err_exp_2, meas_exp, meas_exp_1, xbasis[block_no], code[block_no], loc, loss_norm_1, loss_norm_2, norms, norms_1))*1.1
-
     #ceil_constant = 0.5
     counter = false
 
@@ -99,7 +98,6 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
 
             # sample a random number between 1 and max
             u = rand(Uniform(0, ceil_constant))
-            #u = rand()
 
             # check if condition is true
             if abs(f_x) > ceil_constant
@@ -115,7 +113,6 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
         end
 
     elseif block_no == 2
-        #println("qubit we are sampling is | row: ", x, " | col: ", y, " | sample_no: ", z)
         while counter == false
             # sample a measurement
             samples[x, y, z] = sample_generator(code[2], measure_type[2], xbasis[2])
@@ -124,7 +121,6 @@ function rejection_sampling(err_prep_1, err_prep_2, err_exp_1, err_exp_2, block_
             global f_x = pdf_2(meas_exp_1, meas_exp, err_exp_2, norms, norms_1, loc, block_size, loss_norm_1, loss_norm_2)
 
             # sample a random number
-            println(ceil_constant)
             u = rand(Uniform(0, ceil_constant))
 
             # condition
@@ -329,23 +325,19 @@ function find_max_dist(block_size, block_no, meas_type, meas_ops, err_prep_1, er
     end
 
     # find heights for every range and then choose the maximum
-
-
     if block_no == 1
         if meas_type == "heterodyne"
             row_range, col_range = size(samples_range)
-            global heights = zeros(row_range, col_range)
+            global heights = zeros(Complex{Float64}, (row_range, col_range))
 
             for i = 1:row_range
                 for j = 1:col_range
                     meas_exp[1][loc[1], loc[2], loc[3]], meas_exp[2][loc[1], loc[2], loc[3]], meas_exp[3][loc[1], loc[2], loc[3]], meas_exp[4][loc[1], loc[2], loc[3]] = meas_exp_prep(meas_ops[1], samples_range[i, j], err_prep_1[1][loc[1], loc[2], loc[3]], err_prep_1[2][loc[1], loc[2], loc[3]])
                     heights[i, j] = pdf_1(meas_exp, err_exp_1, err_exp_2, norms, loc, block_size, loss_norm_1, loss_norm_2)
-
                 end
             end
-
         elseif meas_type == "opt_phase"
-            global heights = zeros(length(samples_range))
+            global heights = zeros(Complex{Float64}, length(samples_range))
 
             for i = 1:length(samples_range)
                 meas_exp[1][loc[1], loc[2], loc[3]], meas_exp[2][loc[1], loc[2], loc[3]], meas_exp[3][loc[1], loc[2], loc[3]], meas_exp[4][loc[1], loc[2], loc[3]] = meas_exp_prep(meas_ops[1], samples_range[i], err_prep_1[1][loc[1], loc[2], loc[3]], err_prep_1[2][loc[1], loc[2], loc[3]])
@@ -355,7 +347,7 @@ function find_max_dist(block_size, block_no, meas_type, meas_ops, err_prep_1, er
     elseif block_no == 2
         if meas_type == "heterodyne"
             row_range, col_range = size(samples_range)
-            global heights = zeros(row_range, col_range)
+            global heights = zeros(Complex{Float64}, (row_range, col_range))
 
             for i = 1:row_range
                 for j = 1:col_range
@@ -365,15 +357,16 @@ function find_max_dist(block_size, block_no, meas_type, meas_ops, err_prep_1, er
             end
 
         elseif meas_type == "opt_phase"
-            global heights = zeros(length(samples_range))
+            global heights = zeros(Complex{Float64}, length(samples_range))
 
             for i = 1:length(samples_range)
+                meas_exp[1][loc[1], loc[2], loc[3]], meas_exp[2][loc[1], loc[2], loc[3]], meas_exp[3][loc[1], loc[2], loc[3]], meas_exp[4][loc[1], loc[2], loc[3]] = meas_exp_prep(meas_ops[2], samples_range[i], err_prep_2[1][loc[1], loc[2], loc[3]], err_prep_2[2][loc[1], loc[2], loc[3]])
                 heights[i] = pdf_2(meas_exp_1, meas_exp, err_exp_2, norms, norms_1, loc, block_size, loss_norm_1, loss_norm_2)
             end
         end
     end
-
+    
     # return the maximum height
-    max_height = findmax(heights)[1]
+    max_height = findmax(abs.(heights))[1]
     return max_height
 end
