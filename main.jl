@@ -48,7 +48,7 @@ for i = 1:length(x)
     push!(gate_fid_list, gate_fid_list_temp)
 end
 
-ARGS = ["opt", "ml_0.01_v2"]
+ARGS = ["opt", "ml_0.01_hi"]
 
 # now we save onto a folder
 #open("parameters.txt", "w") do file

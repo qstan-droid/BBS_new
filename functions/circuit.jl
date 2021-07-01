@@ -83,7 +83,7 @@ function circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, d
     # bias = [bias_amplitude_1, bias_amplitude_2]
     println("decoding...")
     @time begin
-        outcomes_1, outcomes_2 = decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, sample_no, decode_type, measure, bias, xbasis)
+        outcomes_1, outcomes_2 = decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, sample_no, decode_type, measure, bias, xbasis, code)
     end
     
     ###################################################################################################

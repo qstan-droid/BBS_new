@@ -1,8 +1,8 @@
 # number of samples
-sample_no = 1000
+sample_no = 10000
 
 # type of measurement
-measure = ["heterodyne", "heterodyne"]
+measure = ["opt_phase", "opt_phase"]
 
 # note the invariable parameters of code
 code = ["binomial", "binomial"]

@@ -5,15 +5,15 @@ m: 1
 rep: 1
 N_ord: [3, 1]
 -------------------------------------
-loss_1: true, 0.1
+loss_1: true, 0.01
 loss_2: false, 0.0
 dephase_1: false, 0.0
 dephase_2: false, 0.0
 -------------------------------------
-measurement_type: ["heterodyne", "heterodyne"]
-decode_type: naive
+measurement_type: ["opt_phase", "opt_phase"]
+decode_type: max_likelihood
 -------------------------------------
 x_var: alpha
-alpha: 1-1-15
+alpha: 1-1-10
 bias: [0, 0]
 differ_alpha: true, 15
