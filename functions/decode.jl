@@ -13,17 +13,17 @@ function decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, 
     if decode_type == "naive"
 
         # decode each qubit individually
-        samples_out_1 = naive_decode(samples_1, N_ord[1], block_size, measure[1], 0)
-        samples_out_2 = naive_decode(samples_2, N_ord[2], block_size, measure[2], 0)
+        samples_out_1 = naive_decode(samples_1, N_ord, block_size, measure[1], bias[1], decode_type, err_info, 1, xbasis)
+        samples_out_2 = naive_decode(samples_2, N_ord, block_size, measure[2], bias[2], decode_type, err_info, 2, xbasis)
 
         # decide outcome through these
         outcomes_1 = block_decode(samples_out_1, 1, block_size)
         outcomes_2 = block_decode(samples_out_2, 2, block_size)
-    elseif decode_type == "bias"
+    elseif decode_type == "naive_ave_bias"
 
         # decode each qubit individually
-        samples_out_1 = naive_decode(samples_1, N_ord[1], block_size, measure[1], bias[1])
-        samples_out_2 = naive_decode(samples_2, N_ord[2], block_size, measure[2], bias[2])
+        samples_out_1 = naive_decode(samples_1, N_ord, block_size, measure[1], bias[1], decode_type, err_info, 1, xbasis)
+        samples_out_2 = naive_decode(samples_2, N_ord, block_size, measure[2], bias[2], decode_type, err_info, 2, xbasis)
 
         # decide outcome through these
         outcomes_1 = block_decode(samples_out_1, 1, block_size)
@@ -51,15 +51,23 @@ end
 #########################################################
 # different functions, different decoding types
 
-function naive_decode(samples, N_ord, block_size, measure, bias)
+function naive_decode(samples, N_ord, block_size, measure, bias, decode_type, err_info, block_no, xbasis)
     # decide the outcome for each qubit individually
     row, col, sample_no = size(samples)
     samples_out = zeros(Int64, (row, col, sample_no))
+    if decode_type == "naive_ave_bias"
+        # bias is -phi as we want to add the bias angle to whatever result we get
+        if block_no == 1
+            bias = -find_ave_angle(err_info[3], N_ord, xbasis[2])
+        elseif block_no == 2
+            bias = -find_ave_angle(err_info[1], N_ord, xbasis[1])
+        end
+    end
 
     for k = 1:sample_no
         for i = 1:row
             for j = 1:col
-                samples_out[i, j, k] = meas_outcome(samples[i, j, k], N_ord, measure, bias)
+                samples_out[i, j, k] = meas_outcome(samples[i, j, k], N_ord[block_no], measure, bias)
             end
         end
     end

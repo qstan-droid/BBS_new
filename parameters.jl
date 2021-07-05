@@ -41,5 +41,5 @@ elseif x_var == "bias"
 end
 
 # how to decode
-# decoder_type = naive, bias, ave_max_like, ml, ml_ave, mlnc
-decode_type = "mlnc"
+# decoder_type = naive, naive_ave_bias, ave_max_like, ml, ml_ave, mlnc
+decode_type = "naive_ave_bias"
