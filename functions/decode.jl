@@ -2,6 +2,7 @@ using QuantumOptics
 using Distributions
 using BenchmarkTools
 include("measurement.jl")
+include("errors.jl")
 
 function decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, sample_no, decode_type, measure, bias, xbasis, code)
     # initialise empty arrays
@@ -27,21 +28,21 @@ function decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, 
         # decide outcome through these
         outcomes_1 = block_decode(samples_out_1, 1, block_size)
         outcomes_2 = block_decode(samples_out_2, 2, block_size)
-    elseif decode_type == "ave_max_like"
+    elseif decode_type == "mlnc"
 
         # take the two samples and some information about the system and
-        outcomes_1 = ave_max_like_decoder(samples_1)
-        outcomes_2 = ave_max_like_decoder(samples_2)
-    elseif decode_type == "max_likelihood"
+        outcomes_1 = max_like_no_corr(samples_1, N_ord, err_info, xbasis, measure[1], code[1], 1, bias)
+        outcomes_2 = max_like_no_corr(samples_2, N_ord, err_info, xbasis, measure[2], code[2], 2, bias)
+    elseif decode_type == "ml"
 
         # Take the two samples and find the maximum likelihood
         outcomes_1, outcomes_2 = max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis, measure)
         # outcomes_1, outcomes_2 = ml_decoder_new(samples_1, samples_2, N_ord, err_info, xbasis, measure, code)
-    elseif decode_type == "max_likelihood_no_corr"
+    elseif decode_type == "ml_ave"
 
         # like maximum likelihood but we average out the correlations between the measurements (should be faster?)
-        outcomes_1 = max_like_decoder_no_corr(samples_1, N_ord, err_info, xbasis, measure, 1)
-        outcomes_2 = max_like_decoder_no_corr(samples_2, N_ord, err_info, xbasis, measure, 2)
+        outcomes_1 = max_like_decoder_ave(samples_1, N_ord, err_info, xbasis, measure, 1)
+        outcomes_2 = max_like_decoder_ave(samples_2, N_ord, err_info, xbasis, measure, 2)
     end
 
     return outcomes_1, outcomes_2
@@ -213,28 +214,30 @@ function ml_decoder_new(samples_1, samples_2, N_ord, err_info, xbasis, measure, 
 
     parts = zeros(Float64, 4)
     l_max = findmin([xbasis_1[8]*N_ord[1], xbasis_2[8]*N_ord[2]])[1] + 2
+    phi = 0
+
     for ind = 1:sample_no
 
         if err_info[1] != 0.0 && err_info[3] == 0.0
-            parts[1] = norm(sum(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "plus", k, 0)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "plus", 0, k) for k = 0:l_max))
-            parts[2] = norm(sum(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "plus", k, 0)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "min", 0, k) for k = 0:l_max))
-            parts[3] = norm(sum(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "min", k, 0)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "plus", 0, k) for k = 0:l_max))
-            parts[4] = norm(sum(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "min", k, 0)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "min", 0, k) for k = 0:l_max))
+            parts[1] = norm(sum(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "plus", k, 0, phi)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "plus", 0, k, phi) for k = 0:l_max))
+            parts[2] = norm(sum(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "plus", k, 0, phi)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "min", 0, k, phi) for k = 0:l_max))
+            parts[3] = norm(sum(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "min", k, 0, phi)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "plus", 0, k, phi) for k = 0:l_max))
+            parts[4] = norm(sum(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "min", k, 0, phi)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "min", 0, k, phi) for k = 0:l_max))
         elseif err_info[1] == 0.0 && err_info[3] != 0.0
-            parts[1] = norm(sum(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "plus", 0, k)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "plus", k, 0) for k = 0:l_max))
-            parts[2] = norm(sum(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "plus", 0, k)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "min", k, 0) for k = 0:l_max))
-            parts[3] = norm(sum(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "min", 0, k)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "plus", k, 0) for k = 0:l_max))
-            parts[4] = norm(sum(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "min", 0, k)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "min", k, 0) for k = 0:l_max))
+            parts[1] = norm(sum(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "plus", 0, k, phi)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "plus", k, 0, phi) for k = 0:l_max))
+            parts[2] = norm(sum(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "plus", 0, k, phi)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "min", k, 0, phi) for k = 0:l_max))
+            parts[3] = norm(sum(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "min", 0, k, phi)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "plus", k, 0, phi) for k = 0:l_max))
+            parts[4] = norm(sum(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "min", 0, k, phi)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "min", k, 0, phi) for k = 0:l_max))
         elseif err_info[1] != 0.0 && err_info[3] != 0.0
-            parts[1] = norm(sum(sum(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "plus", k, j)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "plus", j, k) for k = 0:l_max) for j = 0:l_max))
-            parts[2] = norm(sum(sum(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "plus", k, j)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "min", j, k) for k = 0:l_max) for j = 0:l_max))
-            parts[3] = norm(sum(sum(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "min", k, j)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "plus", j, k) for k = 0:l_max) for j = 0:l_max))
-            parts[4] = norm(sum(sum(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "min", k, j)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "min", j, k) for k = 0:l_max) for j = 0:l_max))
+            parts[1] = norm(sum(sum(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "plus", k, j, phi)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "plus", j, k, phi) for k = 0:l_max) for j = 0:l_max))
+            parts[2] = norm(sum(sum(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "plus", k, j, phi)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "min", j, k, phi) for k = 0:l_max) for j = 0:l_max))
+            parts[3] = norm(sum(sum(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "min", k, j, phi)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "plus", j, k, phi) for k = 0:l_max) for j = 0:l_max))
+            parts[4] = norm(sum(sum(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "min", k, j, phi)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "min", j, k, phi) for k = 0:l_max) for j = 0:l_max))
         elseif err_info[1] == 0.0 && err_info[3] == 0.0
-            parts[1] = norm(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "plus", 0, 0)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "plus", 0, 0))
-            parts[2] = norm(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "plus", 0, 0)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "min", 0, 0))
-            parts[3] = norm(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "min", 0, 0)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "plus", 0, 0))
-            parts[4] = norm(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "min", 0, 0)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "min", 0, 0))
+            parts[1] = norm(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "plus", 0, 0, phi)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "plus", 0, 0, phi))
+            parts[2] = norm(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "plus", 0, 0, phi)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "min", 0, 0, phi))
+            parts[3] = norm(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "min", 0, 0, phi)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "plus", 0, 0, phi))
+            parts[4] = norm(A_trace(samples_1[ind], measure[1], code[1], err_info[1], N_ord, xbasis_1, "min", 0, 0, phi)*B_trace(samples_2[ind], measure[2], code[2], err_info[3], N_ord, xbasis_2, "min", 0, 0, phi))
         end
         max_index = findmax(parts)[2]
 
@@ -256,7 +259,7 @@ function ml_decoder_new(samples_1, samples_2, N_ord, err_info, xbasis, measure, 
     return maj_1, maj_2
 end
 
-function A_trace(x, measure, code, err_info, N_ord, xbasis, pm, l1, l2)
+function A_trace(x, measure, code, err_info, N_ord, xbasis, pm, l1, l2, phi)
     N_ord_1 = N_ord[1]
     N_ord_2 = N_ord[2]
 
@@ -273,7 +276,7 @@ function A_trace(x, measure, code, err_info, N_ord, xbasis, pm, l1, l2)
             L = function(t)
                 if t*N_ord_1 - l1 >= 0
                     sqrt(factorial(big(t*N_ord_1)))/factorial(big(t*N_ord_1 - l1))
-                elseif t*N_ord_1 < 0
+                else
                     0
                 end
             end
@@ -282,13 +285,14 @@ function A_trace(x, measure, code, err_info, N_ord, xbasis, pm, l1, l2)
                 exp(-nu*(N_ord_1*(s+t) - 2*l1)/2)
             end
             exp_2 = function(s, t)
-                exp(1im*N_ord_1*(t-s)*(pi*l2/(N_ord_1*N_ord_2)))
+                exp(1im*N_ord_1*(t-s)*(pi*l2/(N_ord_1*N_ord_2) - phi))
             end
 
             if pm == "plus"
-                ans = (C_l^2 * exp(-abs(x)^2)/pi)*sum(sum(G(j)*G(k)*L(k)*L(j)*exp_1(k, j)*exp_2(k, j)*x^(j*N_ord_1 - l1) * conj(x)^(k*N_ord_1 - l1) for k = 0:K_max) for j = 0:K_max)
+                # ans = (C_l^2*exp(-abs(x)^2)/pi)*sum(sum(G(j)*G(k)*L(k)*L(j)*exp_1(k, j)*exp_2(k, j)*x^(j*N_ord_1 - l1)*conj(x)^(k*N_ord_1 - l1) for k = 0:K_max) for j = 0:K_max)
+                ans = (C_l^2*exp(-abs(x)^2)/pi)*sum(sum(G(j)*G(k)*L(k)*L(j)*exp_1(k, j)*exp_2(k, j)*x^(j*N_ord_1 - l1) *conj(x)^(k*N_ord_1 - l1) for k = 0:K_max) for j = 0:K_max)
             elseif pm == "min"
-                ans = (C_l^2 * exp(-abs(x)^2)/pi)*sum(sum((-1)^(k+j) *G(j)*G(k)*L(k)*L(j)*exp_1(k, j)*exp_2(k, j)*(x)^(j*N_ord_1 - l1) * conj(x)^(k*N_ord_1 - l1) for k = 0:K_max) for j = 0:K_max)
+                ans = (C_l^2*exp(-abs(x)^2)/pi)*sum(sum((-1)^(k+j) *G(j)*G(k)*L(k)*L(j)*exp_1(k, j)*exp_2(k, j)*x^(j*N_ord_1 - l1)*conj(x)^(k*N_ord_1 - l1) for k = 0:K_max) for j = 0:K_max)
             end
         elseif code == "cat"
 
@@ -312,7 +316,7 @@ function A_trace(x, measure, code, err_info, N_ord, xbasis, pm, l1, l2)
                 exp(-nu*(N_ord_1*(s + t) - 2*l1)/2)
             end
             exp_2 = function(s, t) 
-                exp(1im*N_ord_1*(t-s)*(pi*l2/(N_ord_1*N_ord_2)))
+                exp(1im*N_ord_1*(t-s)*(pi*l2/(N_ord_1*N_ord_2) - phi))
             end
 
             if pm == "plus"
@@ -328,7 +332,7 @@ function A_trace(x, measure, code, err_info, N_ord, xbasis, pm, l1, l2)
     return ans
 end
 
-function B_trace(x, measure, code, err_info, N_ord, xbasis, pm, l1, l2)
+function B_trace(x, measure, code, err_info, N_ord, xbasis, pm, l1, l2, phi)
     # a lazy swap when we switch from block 1 to block 2
     N_ord_1 = N_ord[2]
     N_ord_2 = N_ord[1]
@@ -354,13 +358,13 @@ function B_trace(x, measure, code, err_info, N_ord, xbasis, pm, l1, l2)
                 exp(-nu*(N_ord_1*(s+t) - 2*l1)/2)
             end
             exp_2 = function(s, t)
-                exp(1im*N_ord_1*(t-s)*(pi*l2/(N_ord_1*N_ord_2)))
+                exp(1im*N_ord_1*(t-s)*(pi*l2/(N_ord_1*N_ord_2) - phi))
             end
 
             if pm == "plus"
-                ans = (C_l^2 * exp(-abs(x)^2)/pi)*sum(sum(G(j)*G(k)*L(k)*L(j)*exp_1(k, j)*exp_2(k, j)*x^(j*N_ord_1 - l1) * conj(x)^(k*N_ord_1 - l1) for k = 0:K_max) for j = 0:K_max)
+                ans = (C_l^2*exp(-abs(x)^2)/pi)*sum(sum(G(j)*G(k)*L(k)*L(j)*exp_1(k, j)*exp_2(k, j)*x^(j*N_ord_1 - l1)*conj(x)^(k*N_ord_1 - l1) for k = 0:K_max) for j = 0:K_max)
             elseif pm == "min"
-                ans = (C_l^2 * exp(-abs(x)^2)/pi)*sum(sum((-1)^(k+j) *G(j)*G(k)*L(k)*L(j)*exp_1(k, j)*exp_2(k, j)*(x)^(j*N_ord_1 - l1) * conj(x)^(k*N_ord_1 - l1) for k = 0:K_max) for j = 0:K_max)
+                ans = (C_l^2*exp(-abs(x)^2)/pi)*sum(sum((-1)^(k+j) *G(j)*G(k)*L(k)*L(j)*exp_1(k, j)*exp_2(k, j)*x^(j*N_ord_1 - l1)*conj(x)^(k*N_ord_1 - l1) for k = 0:K_max) for j = 0:K_max)
             end
         elseif code == "cat" 
 
@@ -384,7 +388,7 @@ function B_trace(x, measure, code, err_info, N_ord, xbasis, pm, l1, l2)
                 exp(-nu*(N_ord_1*(s + t) - 2*l1)/2)
             end
             exp_2 = function(s, t) 
-                exp(1im*N_ord_1*(t-s)*(pi*l2/(N_ord_1*N_ord_2)))
+                exp(1im*N_ord_1*(t-s)*(pi*l2/(N_ord_1*N_ord_2) - phi))
             end
             if pm == "plus"
                 ans = (C_l^2/(K_max*N_ord_1 + 1))*sum(sum(G(j)*G(k)*L(k)*L(j)*exp_1(k, j)*exp_2(k, j)*exp(1im*x*(j*N_ord_1 - l1))*exp(-1im*x*(k*N_ord_1 - l1)) for k = 0:K_max) for j = 0:K_max)
@@ -402,7 +406,7 @@ end
 #########################################################
 # averaged_correlation decoder
 
-function max_like_decoder_no_corr(samples, N_ord, err_info, xbasis, measure, block_no)
+function max_like_decoder_ave(samples, N_ord, err_info, xbasis, measure, block_no)
     part = zeros(2)
     row, col, sample_no = size(samples)
 
@@ -459,7 +463,7 @@ function max_like_decoder_no_corr(samples, N_ord, err_info, xbasis, measure, blo
     end
 
     # prepare the state
-    lmax = 50
+    l_max = findmin([xbasis_1[8]*N_ord[1], xbasis_2[8]*N_ord[2]])[1] + 2
     if block_no == 1
         meas_op = measurement_operator(measure[1], xbasis[1], N_ord[1])
         rho_A = (plus_2 + min_2)/sqrt(2)
@@ -487,7 +491,71 @@ function max_like_decoder_no_corr(samples, N_ord, err_info, xbasis, measure, blo
     end
 
     return maj
+
+
 end
+
+#########################################################
+# averaged_correlation decoder
+
+function max_like_no_corr(samples, N_ord, err_info, xbasis, measure, code, block_no, bias)
+    row, col, sample_no = size(samples)
+
+    # prepare an errored state channel
+    parts = zeros(Complex{Float64}, 2)
+
+    # xbasis sorting
+    if block_no == 1
+        xbasis_send = xbasis[2]
+        xbasis_stay = xbasis[1]
+    elseif block_no == 2
+        xbasis_send = xbasis[1]
+        xbasis_stay = xbasis[2]
+    end
+
+    # err_info, which mode are we talking about
+    if block_no == 1
+        err_info_this = err_info[1]
+        err_info_away = err_info[3]
+    elseif block_no == 2
+        err_info_this = err_info[3]
+        err_info_away = err_info[1]
+    end
+    
+    # angle to include
+    phi = find_ave_angle(err_info_away, N_ord, xbasis_send) 
+    #phi = bias[block_no]
+
+    l_max = xbasis_stay[8]*N_ord[block_no] + 2
+    maj = zeros(Bool, (row, col, sample_no))
+    
+    for i = 1:sample_no
+        parts[1] = sum(A_trace(samples[i], measure, code, err_info_this, [N_ord[block_no], N_ord[block_no]], xbasis_stay, "plus", j, 0, phi) for j = 0:l_max)
+        parts[2] = sum(A_trace(samples[i], measure, code, err_info_this, [N_ord[block_no], N_ord[block_no]], xbasis_stay, "min", j, 0, phi) for j = 0:l_max)
+    
+        max_index = findmax(abs.(parts))[2]
+        if max_index == 1
+            maj[i] = true
+        else
+            maj[i] = false
+        end
+    end
+
+    return maj
+end
+
+function find_ave_angle(nu, N_ord, xbasis)
+    N_ord_1 = N_ord[1]
+    N_ord_2 = N_ord[2]
+
+    l_max = 50
+    k_tilde = sum(norm(loss_pdf(nu, j, xbasis))*j for j = 0:l_max)
+    println(k_tilde)
+
+    return -pi*k_tilde/(N_ord_1*N_ord_2)
+end
+
+
 
 #########################################################
 # functions which are tools for decoding

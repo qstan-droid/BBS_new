@@ -24,16 +24,19 @@ ave_gate_SE = zeros(Float64, length(x))
 for i = 1:length(x)
 
     println("-------------------------------------")
-    println("x_vary: ", x_var, " | ", "x: ", x[i], " | ancilla mode alpha : ",  dif_alpha, "-", alpha_2, " | order: ", N_ord, " | block size (row, col, rep): ", block_size, " | ")
-
+    
     @time begin
         if x_var == "alpha"
+            println("x_vary: ", x_var, " | ", "x: ", x[i], " | ancilla mode alpha : ",  dif_alpha, "-", alpha_2, " | order: ", N_ord, " | block size (row, col, rep): ", block_size, " | ")
+
             if dif_alpha == false
                 ave_fid[i], ave_gate_fid[i], fid_list_temp, gate_fid_list_temp, samples_1_temp, samples_2_temp, ave_fid_SE[i], ave_gate_SE[i] = circuit(code, N_ord, [x[i], x[i]], block_size, err_place, err_info, measure, decode_type, sample_no, bias)
             else
                 ave_fid[i], ave_gate_fid[i], fid_list_temp, gate_fid_list_temp, samples_1_temp, samples_2_temp, ave_fid_SE[i], ave_gate_SE[i] = circuit(code, N_ord, [x[i], alpha_2], block_size, err_place, err_info, measure, decode_type, sample_no, bias)
             end
         elseif x_var == "bias"
+            println("x_vary: ", x_var, " | ", "x: ", x[i], " | alpha : ",  alpha[1], ", ", alpha[2], " | order: ", N_ord, " | block size (row, col, rep): ", block_size, " | ")
+
             if where_bias == 1
                 ave_fid[i], ave_gate_fid[i], fid_list_temp, gate_fid_list_temp, samples_1_temp, samples_2_temp, ave_fid_SE[i], ave_gate_SE[i] = circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, decode_type, sample_no, [x[i], 0])
             elseif where_bias == 2
@@ -48,7 +51,7 @@ for i = 1:length(x)
     push!(gate_fid_list, gate_fid_list_temp)
 end
 
-ARGS = ["opt", "ml_0.01_hi"]
+ARGS = ["het", "ave_bias_mlnc_testing"]
 
 # now we save onto a folder
 #open("parameters.txt", "w") do file
