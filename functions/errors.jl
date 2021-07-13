@@ -93,7 +93,7 @@ end
 
 #################################################
 
-function error_prep(loss, dephase, nu_l, xbasis)
+function error_prep(loss, dephase, nu_l, xbasis, block_no)
 
     basis_1 = xbasis[5]
     basis_2 = xbasis[6]
@@ -101,7 +101,15 @@ function error_prep(loss, dephase, nu_l, xbasis)
     a_b = xbasis[4]
     n_b = xbasis[3]
 
-    E(x::Int64, phi, nu) = (((1 - exp(-nu))^(x/2))/(sqrt(factorial(big(x)))))*exp((-nu/2 + phi*1im)*dense(n_b))*(a_b^x)
+    if block_no == 1
+        E = function(x::Int64, phi, nu) 
+            (((1 - exp(-nu))^(x/2))/(sqrt(factorial(big(x)))))*exp(1im*phi*dense(n_b))*exp(-nu/2*dense(n_b))*(a_b^x)
+        end
+    elseif block_no == 2
+        E = function(x::Int64, phi, nu) 
+            (((1 - exp(-nu))^(x/2))/(sqrt(factorial(big(x)))))*exp(-nu/2*dense(n_b))*(a_b^x) * exp(1im*phi*dense(n_b))
+        end
+    end
 
     row, col, sample_no = size(loss)
 

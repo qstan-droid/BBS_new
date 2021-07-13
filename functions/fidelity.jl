@@ -77,9 +77,11 @@ function fid_ave_func(outcomes_1, outcomes_2, P, N_ord, x)
 
     psi_ini = (tensor(zero, zero) + tensor(one, one))/sqrt(2)
 
-    row, col, sample_no = size(outcomes_1)
+    sample_no = length(outcomes_1)
     fid_list = zeros(Float64, (sample_no, 1))
     fid_gate_list = zeros(Float64, (sample_no, 1))
+
+    println(sample_no)
 
     # N_ord
     N_ord_1 = N_ord[1]

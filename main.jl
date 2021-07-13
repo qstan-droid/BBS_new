@@ -21,37 +21,7 @@ ave_fid_SE = zeros(Float64, length(x))
 ave_gate_fid = zeros(Float64, length(x))
 ave_gate_SE = zeros(Float64, length(x))
 
-for i = 1:length(x)
-
-    println("-------------------------------------")
-    
-    @time begin
-        if x_var == "alpha"
-            println("x_vary: ", x_var, " | ", "x: ", x[i], " | ancilla mode alpha : ",  dif_alpha, "-", alpha_2, " | order: ", N_ord, " | block size (row, col, rep): ", block_size, " | ")
-
-            if dif_alpha == false
-                ave_fid[i], ave_gate_fid[i], fid_list_temp, gate_fid_list_temp, samples_1_temp, samples_2_temp, ave_fid_SE[i], ave_gate_SE[i] = circuit(code, N_ord, [x[i], x[i]], block_size, err_place, err_info, measure, decode_type, sample_no, bias)
-            else
-                ave_fid[i], ave_gate_fid[i], fid_list_temp, gate_fid_list_temp, samples_1_temp, samples_2_temp, ave_fid_SE[i], ave_gate_SE[i] = circuit(code, N_ord, [x[i], alpha_2], block_size, err_place, err_info, measure, decode_type, sample_no, bias)
-            end
-        elseif x_var == "bias"
-            println("x_vary: ", x_var, " | ", "x: ", x[i], " | alpha : ",  alpha[1], ", ", alpha[2], " | order: ", N_ord, " | block size (row, col, rep): ", block_size, " | ")
-
-            if where_bias == 1
-                ave_fid[i], ave_gate_fid[i], fid_list_temp, gate_fid_list_temp, samples_1_temp, samples_2_temp, ave_fid_SE[i], ave_gate_SE[i] = circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, decode_type, sample_no, [x[i], 0])
-            elseif where_bias == 2
-                ave_fid[i], ave_gate_fid[i], fid_list_temp, gate_fid_list_temp, samples_1_temp, samples_2_temp, ave_fid_SE[i], ave_gate_SE[i] = circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, decode_type, sample_no, [0, x[i]])
-            end
-        end
-    end
-
-    append!(samples_1, samples_1_temp)
-    append!(samples_2, samples_2_temp)
-    push!(fid_list, fid_list_temp)
-    push!(gate_fid_list, gate_fid_list_temp)
-end
-
-ARGS = ["het", "ave_bias_mlnc_testing"]
+ARGS = ["het", "(1,5,1)_ml_ave_0.01_same_err_N1"]
 
 # now we save onto a folder
 #open("parameters.txt", "w") do file
@@ -84,6 +54,47 @@ open(string("data_", ARGS[2], "/parameters_", ARGS[1],".txt"), "w") do file
     end
 end
 
+for i = 1:length(x)
+
+    println("-------------------------------------")
+    
+    @time begin
+        if x_var == "alpha"
+            println("x_vary: ", x_var, " | ", "x: ", x[i], " | ancilla mode alpha : ",  dif_alpha, "-", alpha_2, " | order: ", N_ord, " | block size (row, col, rep): ", block_size, " | ")
+
+            if dif_alpha == false
+                ave_fid[i], ave_gate_fid[i], fid_list_temp, gate_fid_list_temp, samples_1_temp, samples_2_temp, ave_fid_SE[i], ave_gate_SE[i] = circuit(code, N_ord, [x[i], x[i]], block_size, err_place, err_info, measure, decode_type, sample_no, bias)
+            else
+                ave_fid[i], ave_gate_fid[i], fid_list_temp, gate_fid_list_temp, samples_1_temp, samples_2_temp, ave_fid_SE[i], ave_gate_SE[i] = circuit(code, N_ord, [x[i], alpha_2], block_size, err_place, err_info, measure, decode_type, sample_no, bias)
+            end
+        elseif x_var == "bias"
+            println("x_vary: ", x_var, " | ", "x: ", x[i], " | alpha : ",  alpha[1], ", ", alpha[2], " | order: ", N_ord, " | block size (row, col, rep): ", block_size, " | ")
+
+            if where_bias == 1
+                ave_fid[i], ave_gate_fid[i], fid_list_temp, gate_fid_list_temp, samples_1_temp, samples_2_temp, ave_fid_SE[i], ave_gate_SE[i] = circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, decode_type, sample_no, [x[i], 0])
+            elseif where_bias == 2
+                ave_fid[i], ave_gate_fid[i], fid_list_temp, gate_fid_list_temp, samples_1_temp, samples_2_temp, ave_fid_SE[i], ave_gate_SE[i] = circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, decode_type, sample_no, [0, x[i]])
+            end
+        end
+    end
+
+    append!(samples_1, samples_1_temp)
+    append!(samples_2, samples_2_temp)
+    push!(fid_list, fid_list_temp)
+    push!(gate_fid_list, gate_fid_list_temp)
+    
+    # Write it as we go
+    writedlm(string("data_", ARGS[2], "/", ARGS[1], ".csv"), ave_fid, ',')
+    writedlm(string("data_", ARGS[2], "/fidelity_list_", ARGS[1], ".csv"), fid_list, ',')
+    writedlm(string("data_", ARGS[2], "/SE_", ARGS[1], ".csv"), ave_fid_SE, ',')
+
+    writedlm(string("data_", ARGS[2], "/gate_", ARGS[1], ".csv"), ave_gate_fid, ',')
+    writedlm(string("data_", ARGS[2], "/gate_fidelity_list_", ARGS[1], ".csv"), gate_fid_list, ',')
+    writedlm(string("data_", ARGS[2], "/gate_SE_", ARGS[1], ".csv"), ave_gate_SE, ',')
+end
+
+
+
 ###########################################
 #                                         #
 #                PLOTTING                 #
@@ -95,14 +106,6 @@ end
 #spot = 1
 #p1_plus, p1_min = samples_plot(samples_1[sample_no*(spot - 1) + 1:sample_no*spot], N_ord[1], x[spot], measure[1], bias[1])
 #p2_plus, p2_min = samples_plot(samples_2[sample_no*(spot - 1) + 1:sample_no*spot], N_ord[2], x[spot], measure[2], bias[2])
-
-writedlm(string("data_", ARGS[2], "/", ARGS[1], ".csv"), ave_fid, ',')
-writedlm(string("data_", ARGS[2], "/fidelity_list_", ARGS[1], ".csv"), fid_list, ',')
-writedlm(string("data_", ARGS[2], "/SE_", ARGS[1], ".csv"), ave_fid_SE, ',')
-
-writedlm(string("data_", ARGS[2], "/gate_", ARGS[1], ".csv"), ave_gate_fid, ',')
-writedlm(string("data_", ARGS[2], "/gate_fidelity_list_", ARGS[1], ".csv"), gate_fid_list, ',')
-writedlm(string("data_", ARGS[2], "/gate_SE_", ARGS[1], ".csv"), ave_gate_SE, ',')
 
 p_fid = initial_plotting(ave_fid, ave_fid_SE, x)
 p_gate = initial_plotting(ave_gate_fid, ave_gate_SE, x)

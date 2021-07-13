@@ -37,12 +37,20 @@ function decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, 
 
         # Take the two samples and find the maximum likelihood
         outcomes_1, outcomes_2 = max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis, measure)
-        # outcomes_1, outcomes_2 = ml_decoder_new(samples_1, samples_2, N_ord, err_info, xbasis, measure, code)
+        #outcomes_1, outcomes_2 = ml_decoder_new(samples_1, samples_2, N_ord, err_info, xbasis, measure, code)
     elseif decode_type == "ml_ave"
 
         # like maximum likelihood but we average out the correlations between the measurements (should be faster?)
-        outcomes_1 = max_like_decoder_ave(samples_1, N_ord, err_info, xbasis, measure, 1)
-        outcomes_2 = max_like_decoder_ave(samples_2, N_ord, err_info, xbasis, measure, 2)
+        #outcomes_1 = max_like_decoder_ave(samples_1, N_ord, err_info, xbasis, measure, 1)
+        #outcomes_2 = max_like_decoder_ave(samples_2, N_ord, err_info, xbasis, measure, 2)
+
+        # find the outcomes 
+        meas_decode_1 = ml_ave(samples_1, N_ord, err_info, xbasis, measure, 1, block_size)
+        meas_decode_2 = ml_ave(samples_2, N_ord, err_info, xbasis, measure, 2, block_size)
+
+        # block_decode the outcomes
+        outcomes_1 = block_decode(meas_decode_1, 1, block_size)
+        outcomes_2 = block_decode(meas_decode_2, 2, block_size)
     end
 
     return outcomes_1, outcomes_2
@@ -451,7 +459,7 @@ function max_like_decoder_ave(samples, N_ord, err_info, xbasis, measure, block_n
     # prepare Kraus operators
     if nu_loss_2 != 0
         A = function(p1, p2)
-            (((1-exp(-nu_loss_1))^(p1/2))/sqrt(factorial(big(p1))))*exp(-nu_loss_1*dense(n_b_1)/2)*a_b_1^p1 * exp(-1im*(p2*pi/(N_ord_1*N_ord_2))*dense(n_b_2))
+            (((1-exp(-nu_loss_1))^(p1/2))/sqrt(factorial(big(p1))))*exp(-nu_loss_1*dense(n_b_1)/2)*a_b_1^p1 * exp(-1im*(p2*rep*pi/(N_ord_1*N_ord_2))*dense(n_b_2))
         end
     else
         A = function(p1, p2) 
@@ -471,7 +479,7 @@ function max_like_decoder_ave(samples, N_ord, err_info, xbasis, measure, block_n
     end
 
     # prepare the state
-    l_max = findmin([xbasis_1[8]*N_ord[1], xbasis_2[8]*N_ord[2]])[1] + 2
+    lmax = findmin([xbasis_1[8]*N_ord[1], xbasis_2[8]*N_ord[2]])[1] + 2
     if block_no == 1
         meas_op = measurement_operator(measure[1], xbasis[1], N_ord[1])
         rho_A = (plus_2 + min_2)/sqrt(2)
@@ -501,6 +509,66 @@ function max_like_decoder_ave(samples, N_ord, err_info, xbasis, measure, block_n
     return maj
 
 
+end
+
+function ml_ave(samples, N_ord, err_info, xbasis, measure, block_no, block_size)
+    row, col, sample_no = size(samples)
+    outcomes = zeros(Int64, (row, col, sample_no))
+
+    # prepare the vector for the likelihoods
+    parts = zeros(Complex{Float64}, 2)
+
+    # prepare the xbasis stuff
+    xbasis_1 = xbasis[1]
+    xbasis_2 = xbasis[2]
+
+    # prepare the N_ords
+    N_ord_1 = N_ord[1]
+    N_ord_2 = N_ord[2]
+
+    # prepare the rotation operator which error rate are we interested in
+    rep = block_size[3]
+    if block_no == 1  # interested in block 2 loss rate
+        C = function(k)
+            exp(-1im*k*rep*pi*dense(xbasis_1[3])/(N_ord_1*N_ord_2))
+        end
+        nu_l = err_info[3]
+        xbasis_l = xbasis[2]
+        
+    elseif block_no == 2  # interested in block 1 loss rate
+        C = function(k)
+            exp(-1im*k*pi*dense(xbasis_2[3])/(N_ord_1*N_ord_2))
+        end
+        nu_l = err_info[1]
+        xbasis_l = xbasis[1]
+    end
+
+    # find the maximum l_max
+    l_max = findmin([xbasis_1[8]*N_ord[1], xbasis_2[8]*N_ord[2]])[1] + 2
+
+    # prepare measurement operator and plus and min states
+    meas_op = measurement_operator(measure[block_no], xbasis[block_no], N_ord[block_no])
+    plus = tensor(xbasis[block_no][1], dagger(xbasis[block_no][1]))
+    min = tensor(xbasis[block_no][2], dagger(xbasis[block_no][2]))
+
+    for n = 1:sample_no
+        for i = 1:row
+            for j = 1:col
+                parts[1] = sum(tr(abs(loss_pdf(nu_l, l, xbasis_l))*meas_op(samples[i, j, n])*C(l)*plus*dagger(C(l))) for l = 0:l_max)
+                parts[2] = sum(tr(abs(loss_pdf(nu_l, l, xbasis_l))*meas_op(samples[i, j, n])*C(l)*min*dagger(C(l))) for l = 0:l_max)
+
+                max_like_index = findmax(abs.(parts))[2]
+
+                if max_like_index == 1
+                    outcomes[i, j, n] = 1
+                elseif max_like_index == 2
+                    outcomes[i, j, n] = -1
+                end
+            end
+        end
+    end
+
+    return outcomes
 end
 
 #########################################################
@@ -558,7 +626,6 @@ function find_ave_angle(nu, N_ord, xbasis)
 
     l_max = 50
     k_tilde = sum(norm(loss_pdf(nu, j, xbasis))*j for j = 0:l_max)
-    println(k_tilde)
 
     return -pi*k_tilde/(N_ord_1*N_ord_2)
 end
@@ -616,7 +683,7 @@ function block_decode(samples_out, block_no, block_size)
     # unpack variables
     rep = block_size[3]
     row, col, sample_no = size(samples_out)
-    maj = zeros(Bool, (row, col, sample_no))
+    maj = zeros(Bool, sample_no)
 
     if block_no == 1
         # we compute total parity of each column

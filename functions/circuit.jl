@@ -34,8 +34,6 @@ function circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, d
     println("propagating errors...")
     loss_1, dephase_1, loss_2, dephase_2 = error_propagation(loss_1, dephase_1, loss_2, dephase_2, block_size, N_ord, sample_no)
 
-    #loss_hist(loss_1)
-
     #println("loss_1: ", loss_1[:, :, :])
     #println("loss_2: ", loss_2)
     #println("----------------------------")
@@ -48,8 +46,8 @@ function circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, d
     # First we pre-prepare the measurements to make it faster
     # first define the Kraus operator for error
 
-    err_prep_1_zero, err_prep_1_one = error_prep(loss_1, dephase_1, err_info[1], xbasis_1)
-    err_prep_2_zero, err_prep_2_one = error_prep(loss_2, dephase_2, err_info[3], xbasis_2)
+    err_prep_1_zero, err_prep_1_one = error_prep(loss_1, dephase_1, err_info[1], xbasis_1, 1)
+    err_prep_2_zero, err_prep_2_one = error_prep(loss_2, dephase_2, err_info[3], xbasis_2, 2)
 
     err_prep_1 = [err_prep_1_zero, err_prep_1_one]
     err_prep_2 = [err_prep_2_zero, err_prep_2_one]
@@ -68,10 +66,10 @@ function circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, d
 
     println("sampling measurements...")
     @time begin
-        samples_1, norms_1, meas_exp_plus_1, meas_exp_min_1, meas_exp_pm_1, meas_exp_mp_1, no_of_times_list_1 = measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, 1, measure, meas_exp_1, [xbasis_1, xbasis_2], N_ord, samples_1, norms_1, code, block_size, loss_norm_1, loss_norm_2)
+        samples_1, norms_1, meas_exp_plus_1, meas_exp_min_1, meas_exp_pm_1, meas_exp_mp_1, no_of_times_list_1 = measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, 1, measure, meas_exp_1, [xbasis_1, xbasis_2], N_ord, samples_1, norms_1, code, block_size, loss_norm_1, loss_norm_2, loss_1)
         meas_exp_1 = [meas_exp_plus_1, meas_exp_min_1, meas_exp_pm_1, meas_exp_mp_1]
         println("second block sampling")
-        samples_2, norms_2, meas_exp_zero_2, meas_exp_one_2, meas_exp_zo_2, meas_exp_oz_2, no_of_times_list_2 = measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, 2, measure, meas_exp_1, [xbasis_1, xbasis_2], N_ord, samples_1, norms_1, code, block_size, loss_norm_1, loss_norm_2)
+        samples_2, norms_2, meas_exp_zero_2, meas_exp_one_2, meas_exp_zo_2, meas_exp_oz_2, no_of_times_list_2 = measurement_samples(err_prep_1, err_prep_2, err_exp_1, err_exp_2, 2, measure, meas_exp_1, [xbasis_1, xbasis_2], N_ord, samples_1, norms_1, code, block_size, loss_norm_1, loss_norm_2, loss_2)
         meas_exp_2 = [meas_exp_zero_2, meas_exp_one_2, meas_exp_zo_2, meas_exp_oz_2]
     end
     #println("acceptance probability 1: ", sum(no_of_times_list_1)/sample_no)
