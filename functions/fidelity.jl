@@ -1,4 +1,5 @@
 using QuantumOptics
+include("measurement.jl")
 
 function meas_operator_misc(meas_type, xbasis, N_ord)
 
@@ -22,35 +23,41 @@ end
 
 ##################################################
 # Finds the coefficients behind each term
-function find_coeff(block_size, samples_1, samples_2, xbasis_1, xbasis_2, err_prep_1, err_prep_2, measure, N_ord)
+function find_coeff(block_size, samples_1, samples_2, xbasis_1, xbasis_2, err_prep_1, err_prep_2, measure, N_ord, H_mn)
 
     row, col, sample_no = size(samples_1)
     rep = block_size[3]
     P = zeros(Complex{Float64}, (4, sample_no))
 
-    meas_1 = meas_operator_misc(measure[1], xbasis_1, N_ord[1])
-    meas_2 = meas_operator_misc(measure[2], xbasis_2, N_ord[2])
+    if measure[1] != "adapt_homo"
+        meas_1 = meas_operator_misc(measure[1], xbasis_1, N_ord[1])
+        meas_2 = meas_operator_misc(measure[2], xbasis_2, N_ord[2])
+    else
+        meas_1 = measurement_operator(measure[1], xbasis_1, N_ord[1], H_mn)
+        meas_2 = measurement_operator(measure[2], xbasis_2, N_ord[2], H_mn)
+    end
 
     for k = 1:sample_no
-        # confirmed that abs is correct
-        A_plus = prod(prod(meas_1(samples_1[i, j, k])*err_prep_1[1][i, j, k] for i = 1:row) + prod(meas_1(samples_1[i, j, k])*err_prep_1[2][i, j, k] for i = 1:row) for j = 1:col)/(sqrt(2)^col)
-        A_min = prod(prod(meas_1(samples_1[i, j, k])*err_prep_1[1][i, j, k] for i = 1:row) - prod(meas_1(samples_1[i, j, k])*err_prep_1[2][i, j, k] for i = 1:row) for j = 1:col)/(sqrt(2)^col)
+        if measure[1] != "adapt_homo"
+            # confirmed that abs is correct
+            A_plus = prod(prod(meas_1(samples_1[i, j, k])*err_prep_1[1][i, j, k] for i = 1:row) + prod(meas_1(samples_1[i, j, k])*err_prep_1[2][i, j, k] for i = 1:row) for j = 1:col)/(sqrt(2)^col)
+            A_min = prod(prod(meas_1(samples_1[i, j, k])*err_prep_1[1][i, j, k] for i = 1:row) - prod(meas_1(samples_1[i, j, k])*err_prep_1[2][i, j, k] for i = 1:row) for j = 1:col)/(sqrt(2)^col)
 
-        B_plus = prod(prod(prod(meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[1][i, (p-1)*col + j, k] for j = 1:col) + prod(meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[2][i, (p-1)*col + j, k] for j = 1:col) for p = 1:rep) for i = 1:row)/(sqrt(2)^(row*rep))
-        B_min = prod(prod(prod(meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[1][i, (p-1)*col + j, k] for j = 1:col) - prod(meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[2][i, (p-1)*col + j, k] for j = 1:col) for p = 1:rep) for i = 1:row)/(sqrt(2)^(row*rep))
+            B_plus = prod(prod(prod(meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[1][i, (p-1)*col + j, k] for j = 1:col) + prod(meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[2][i, (p-1)*col + j, k] for j = 1:col) for p = 1:rep) for i = 1:row)/(sqrt(2)^(row*rep))
+            B_min = prod(prod(prod(meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[1][i, (p-1)*col + j, k] for j = 1:col) - prod(meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[2][i, (p-1)*col + j, k] for j = 1:col) for p = 1:rep) for i = 1:row)/(sqrt(2)^(row*rep))
+        else
+            # A_plus = prod(prod(((dagger(meas_1(samples_1[i, j, k])*err_prep_1[1][i, j, k])*meas_1(samples_1[i, j, k])*err_prep_1[1][i, j, k])) for i = 1:row) + prod(((dagger(meas_1(samples_1[i, j, k])*err_prep_1[2][i, j, k])*meas_1(samples_1[i, j, k])*err_prep_1[2][i, j, k])) for i = 1:row) for j = 1:col)/(sqrt(2)^col)
+            # A_min = prod(prod(((dagger(meas_1(samples_1[i, j, k])*err_prep_1[1][i, j, k])*meas_1(samples_1[i, j, k])*err_prep_1[1][i, j, k])) for i = 1:row) - prod(((dagger(meas_1(samples_1[i, j, k])*err_prep_1[2][i, j, k])*meas_1(samples_1[i, j, k])*err_prep_1[2][i, j, k])) for i = 1:row) for j = 1:col)/(sqrt(2)^col)
 
-
-        #A_plus = dagger(coherentstate(coh_1, samples_1[1, 1, k]))*xbasis_1[1]
-        #A_min = dagger(coherentstate(coh_1, samples_1[1, 1, k]))*xbasis_1[2]
-
-        #B_plus = dagger(coherentstate(coh_2, samples_2[1, 1, k]))*xbasis_2[1]
-        #B_min = dagger(coherentstate(coh_2, samples_2[1, 1, k]))*xbasis_2[2]
-
-        #A_plus = dagger(coherentstate(coh_1, samples_1[1, 1, k]))*(err_prep_1[1][1, 1, k] + err_prep_1[2][1, 1, k])/sqrt(2)
-        #A_min = dagger(coherentstate(coh_1, samples_1[1, 1, k]))*(err_prep_1[1][1, 1, k] - err_prep_1[2][1, 1, k])/sqrt(2)
-
-        #B_plus = dagger(coherentstate(coh_2, samples_2[1, 1, k]))*(err_prep_2[1][1, 1, k] + err_prep_2[2][1, 1, k])/sqrt(2)
-        #B_min = dagger(coherentstate(coh_2, samples_2[1, 1, k]))*(err_prep_2[1][1, 1, k] - err_prep_2[2][1, 1, k])/sqrt(2)
+            # B_plus = prod(prod(prod(((dagger(meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[1][i, (p-1)*col + j, k])*meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[1][i, (p-1)*col + j, k])) for j = 1:col) + prod(((dagger(meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[2][i, (p-1)*col + j, k])*meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[2][i, (p-1)*col + j, k])) for j = 1:col) for p = 1:rep) for i = 1:row)/(sqrt(2)^(row*rep))
+            # B_min = prod(prod(prod(((dagger(meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[1][i, (p-1)*col + j, k])*meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[1][i, (p-1)*col + j, k])) for j = 1:col) - prod(((dagger(meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[2][i, (p-1)*col + j, k])*meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[2][i, (p-1)*col + j, k])) for j = 1:col) for p = 1:rep) for i = 1:row)/(sqrt(2)^(row*rep))
+            
+            A_plus = sqrt(sum(sum(dagger(meas_1(samples_1[i, j, k])*err_prep_1[1][i, j, k])*meas_1(samples_1[i, j, k])*err_prep_1[1][i, j, k] for i = 1:row) + sum(dagger(meas_1(samples_1[i, j, k])*err_prep_1[1][i, j, k])*meas_1(samples_1[i, j, k])*err_prep_1[2][i, j, k] for i = 1:row) + sum(dagger(meas_1(samples_1[i, j, k])*err_prep_1[2][i, j, k])*meas_1(samples_1[i, j, k])*err_prep_1[1][i, j, k] for i = 1:row) + sum(dagger(meas_1(samples_1[i, j, k])*err_prep_1[2][i, j, k])*meas_1(samples_1[i, j, k])*err_prep_1[2][i, j, k] for i = 1:row) for j = 1:col)/2^col)
+            A_min = sqrt(sum(sum(dagger(meas_1(samples_1[i, j, k])*err_prep_1[1][i, j, k])*meas_1(samples_1[i, j, k])*err_prep_1[1][i, j, k] for i = 1:row) - sum(dagger(meas_1(samples_1[i, j, k])*err_prep_1[1][i, j, k])*meas_1(samples_1[i, j, k])*err_prep_1[2][i, j, k] for i = 1:row) - sum(dagger(meas_1(samples_1[i, j, k])*err_prep_1[2][i, j, k])*meas_1(samples_1[i, j, k])*err_prep_1[1][i, j, k] for i = 1:row) + sum(dagger(meas_1(samples_1[i, j, k])*err_prep_1[2][i, j, k])*meas_1(samples_1[i, j, k])*err_prep_1[2][i, j, k] for i = 1:row) for j = 1:col)/2^col)
+            
+            B_plus = sqrt(sum(sum(sum(dagger(meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[1][i, (p-1)*col + j, k])*meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[1][i, (p-1)*col + j, k] for j = 1:col) + sum(dagger(meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[1][i, (p-1)*col + j, k])*meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[2][i, (p-1)*col + j, k] for j = 1:col) + sum(dagger(meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[2][i, (p-1)*col + j, k])*meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[1][i, (p-1)*col + j, k] for j = 1:col) + sum(dagger(meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[2][i, (p-1)*col + j, k])*meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[2][i, (p-1)*col + j, k] for j = 1:col) for p = 1:rep) for i = 1:row)/2^(row*rep))
+            B_min = sqrt(sum(sum(sum(dagger(meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[1][i, (p-1)*col + j, k])*meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[1][i, (p-1)*col + j, k] for j = 1:col) - sum(dagger(meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[1][i, (p-1)*col + j, k])*meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[2][i, (p-1)*col + j, k] for j = 1:col) - sum(dagger(meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[2][i, (p-1)*col + j, k])*meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[1][i, (p-1)*col + j, k] for j = 1:col) + sum(dagger(meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[2][i, (p-1)*col + j, k])*meas_2(samples_2[i, (p-1)*col + j, k])*err_prep_2[2][i, (p-1)*col + j, k] for j = 1:col) for p = 1:rep) for i = 1:row)/2^(row*rep))
+        end
 
         P[1, k] = A_plus*B_plus
         P[2, k] = A_plus*B_min

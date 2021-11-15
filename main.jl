@@ -21,7 +21,7 @@ ave_fid_SE = zeros(Float64, length(x))
 ave_gate_fid = zeros(Float64, length(x))
 ave_gate_SE = zeros(Float64, length(x))
 
-ARGS = ["het", "(1,5,1)_ml_ave_0.01_same_err_N1"]
+ARGS = ["opt", "1_1_1_ml_ave_0.1_same_err_no_diff_N1_opt_no_spread"]
 
 # now we save onto a folder
 #open("parameters.txt", "w") do file
@@ -40,6 +40,7 @@ open(string("data_", ARGS[2], "/parameters_", ARGS[1],".txt"), "w") do file
     write(file, "-------------------------------------\n")
     write(file, string("measurement_type: ", measure, "\n"))
     write(file, string("decode_type: ", decode_type, "\n"))
+    write(file, string("error_spread_type: ", err_spread_type, "\n"))
     write(file, "-------------------------------------\n")
     write(file, string("x_var: ", x_var, "\n"))
     if x_var == "alpha"
@@ -63,17 +64,17 @@ for i = 1:length(x)
             println("x_vary: ", x_var, " | ", "x: ", x[i], " | ancilla mode alpha : ",  dif_alpha, "-", alpha_2, " | order: ", N_ord, " | block size (row, col, rep): ", block_size, " | ")
 
             if dif_alpha == false
-                ave_fid[i], ave_gate_fid[i], fid_list_temp, gate_fid_list_temp, samples_1_temp, samples_2_temp, ave_fid_SE[i], ave_gate_SE[i] = circuit(code, N_ord, [x[i], x[i]], block_size, err_place, err_info, measure, decode_type, sample_no, bias)
+                ave_fid[i], ave_gate_fid[i], fid_list_temp, gate_fid_list_temp, samples_1_temp, samples_2_temp, ave_fid_SE[i], ave_gate_SE[i] = circuit(code, N_ord, [x[i], x[i]], block_size, err_place, err_info, measure, decode_type, sample_no, bias, err_spread_type)
             else
-                ave_fid[i], ave_gate_fid[i], fid_list_temp, gate_fid_list_temp, samples_1_temp, samples_2_temp, ave_fid_SE[i], ave_gate_SE[i] = circuit(code, N_ord, [x[i], alpha_2], block_size, err_place, err_info, measure, decode_type, sample_no, bias)
+                ave_fid[i], ave_gate_fid[i], fid_list_temp, gate_fid_list_temp, samples_1_temp, samples_2_temp, ave_fid_SE[i], ave_gate_SE[i] = circuit(code, N_ord, [x[i], alpha_2], block_size, err_place, err_info, measure, decode_type, sample_no, bias, err_spread_type)
             end
         elseif x_var == "bias"
             println("x_vary: ", x_var, " | ", "x: ", x[i], " | alpha : ",  alpha[1], ", ", alpha[2], " | order: ", N_ord, " | block size (row, col, rep): ", block_size, " | ")
 
             if where_bias == 1
-                ave_fid[i], ave_gate_fid[i], fid_list_temp, gate_fid_list_temp, samples_1_temp, samples_2_temp, ave_fid_SE[i], ave_gate_SE[i] = circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, decode_type, sample_no, [x[i], 0])
+                ave_fid[i], ave_gate_fid[i], fid_list_temp, gate_fid_list_temp, samples_1_temp, samples_2_temp, ave_fid_SE[i], ave_gate_SE[i] = circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, decode_type, sample_no, [x[i], 0], err_spread_type)
             elseif where_bias == 2
-                ave_fid[i], ave_gate_fid[i], fid_list_temp, gate_fid_list_temp, samples_1_temp, samples_2_temp, ave_fid_SE[i], ave_gate_SE[i] = circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, decode_type, sample_no, [0, x[i]])
+                ave_fid[i], ave_gate_fid[i], fid_list_temp, gate_fid_list_temp, samples_1_temp, samples_2_temp, ave_fid_SE[i], ave_gate_SE[i] = circuit(code, N_ord, alpha, block_size, err_place, err_info, measure, decode_type, sample_no, [0, x[i]], err_spread_type)
             end
         end
     end

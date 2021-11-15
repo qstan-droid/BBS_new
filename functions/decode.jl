@@ -4,7 +4,7 @@ using BenchmarkTools
 include("measurement.jl")
 include("errors.jl")
 
-function decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, sample_no, decode_type, measure, bias, xbasis, code)
+function decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, sample_no, decode_type, measure, bias, xbasis, code, H_mn)
     # initialise empty arrays
     outcomes_1 = zeros(Bool, sample_no)
     outcomes_2 = zeros(Bool, sample_no)
@@ -36,7 +36,7 @@ function decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, 
     elseif decode_type == "ml"
 
         # Take the two samples and find the maximum likelihood
-        outcomes_1, outcomes_2 = max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis, measure)
+        outcomes_1, outcomes_2 = max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis, measure, H_mn)
         #outcomes_1, outcomes_2 = ml_decoder_new(samples_1, samples_2, N_ord, err_info, xbasis, measure, code)
     elseif decode_type == "ml_ave"
 
@@ -45,8 +45,8 @@ function decoding(samples_1, samples_2, N_ord, block_size, err_place, err_info, 
         #outcomes_2 = max_like_decoder_ave(samples_2, N_ord, err_info, xbasis, measure, 2)
 
         # find the outcomes 
-        meas_decode_1 = ml_ave(samples_1, N_ord, err_info, xbasis, measure, 1, block_size)
-        meas_decode_2 = ml_ave(samples_2, N_ord, err_info, xbasis, measure, 2, block_size)
+        meas_decode_1 = ml_ave(samples_1, N_ord, err_info, xbasis, measure, 1, block_size, H_mn)
+        meas_decode_2 = ml_ave(samples_2, N_ord, err_info, xbasis, measure, 2, block_size, H_mn)
 
         # block_decode the outcomes
         outcomes_1 = block_decode(meas_decode_1, 1, block_size)
@@ -83,7 +83,7 @@ function naive_decode(samples, N_ord, block_size, measure, bias, decode_type, er
     return samples_out
 end
 
-function max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis, measure)
+function max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis, measure, H_mn)
     part = zeros(4)
     row, col, sample_no = size(samples_1)
 
@@ -94,8 +94,8 @@ function max_like_decoder(samples_1, samples_2, N_ord, err_info, xbasis, measure
     N_ord_2 = N_ord[2]
 
     # prepare measurement operators
-    meas_op_1 = measurement_operator(measure[1], xbasis_1, N_ord_1)
-    meas_op_2 = measurement_operator(measure[2], xbasis_2, N_ord_2)
+    meas_op_1 = measurement_operator(measure[1], xbasis_1, N_ord_1, H_mn)
+    meas_op_2 = measurement_operator(measure[2], xbasis_2, N_ord_2, H_mn)
     meas_ops = [meas_op_1, meas_op_2]
 
     # outcomes for majority
@@ -511,7 +511,7 @@ function max_like_decoder_ave(samples, N_ord, err_info, xbasis, measure, block_n
 
 end
 
-function ml_ave(samples, N_ord, err_info, xbasis, measure, block_no, block_size)
+function ml_ave(samples, N_ord, err_info, xbasis, measure, block_no, block_size, H_mn)
     row, col, sample_no = size(samples)
     outcomes = zeros(Int64, (row, col, sample_no))
 
@@ -547,7 +547,7 @@ function ml_ave(samples, N_ord, err_info, xbasis, measure, block_no, block_size)
     l_max = findmin([xbasis_1[8]*N_ord[1], xbasis_2[8]*N_ord[2]])[1] + 2
 
     # prepare measurement operator and plus and min states
-    meas_op = measurement_operator(measure[block_no], xbasis[block_no], N_ord[block_no])
+    meas_op = measurement_operator(measure[block_no], xbasis[block_no], N_ord[block_no], H_mn)
     plus = tensor(xbasis[block_no][1], dagger(xbasis[block_no][1]))
     min = tensor(xbasis[block_no][2], dagger(xbasis[block_no][2]))
 
