@@ -1,0 +1,18 @@
+code: ["binomial", "binomial"]
+sample_no: 1000
+n: 1
+m: 3
+rep: 1
+N_ord: [1, 1]
+-------------------------------------
+loss_1: true, 0.001
+loss_2: true, 0.001
+dephase_1: false, 0.0
+dephase_2: false, 0.0
+-------------------------------------
+measurement_type: ["heterodyne", "heterodyne"]
+decode_type: ml_ave
+-------------------------------------
+x_var: alpha
+alpha: 1-1-13
+bias: [0, 0]
