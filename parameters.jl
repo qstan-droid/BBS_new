@@ -1,5 +1,5 @@
 # number of samples
-sample_no = 1000
+sample_no = 100
 
 # type of measurement
 # heterodyne, opt_phase, adapt_homo
@@ -7,8 +7,8 @@ measure = ["opt_phase", "opt_phase"]
 
 # note the invariable parameters of code
 code = ["binomial", "binomial"]
-block_size = [1, 1, 1] # row, col, rep
-N_ord = [1, 1]
+block_size = [1, 3, 1] # row, col, rep
+N_ord = [3, 3]
 
 # define what errors are, how strong and where they're applied
 # error_placement = [loss on block_1, dephase on block_1, loss on block_2, dephase on block_2]
@@ -22,7 +22,7 @@ x_var = "alpha"
 if x_var == "alpha"
     bias = [0, 0]
 
-    x_min = 1
+    x_min = 10
     x_step = 1
     x_max = 15
 
@@ -44,4 +44,4 @@ end
 # how to decode
 # decoder_type = naive, naive_ave_bias, ml, ml_ave, mlnc
 decode_type = "ml_ave"
-err_spread_type = "no_spread" # normal, no_spread, err_trans
+err_spread_type = "normal" # normal, no_spread, err_trans

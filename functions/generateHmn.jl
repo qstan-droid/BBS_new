@@ -33,7 +33,6 @@ for n = 1:lmax + lmax_bound
         term_1 = get!(M, (n-1, m), nothing)
         term_2 = get!(M, (n, m-1), nothing)
 
-
         # construct new term
         new_term = (n*term_1 + m*term_2)/(2*(n-m)^2 + n + m)
         merge!(M, Dict((n, m) => new_term))

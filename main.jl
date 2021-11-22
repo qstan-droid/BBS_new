@@ -21,7 +21,7 @@ ave_fid_SE = zeros(Float64, length(x))
 ave_gate_fid = zeros(Float64, length(x))
 ave_gate_SE = zeros(Float64, length(x))
 
-ARGS = ["opt", "1_1_1_ml_ave_0.1_same_err_no_diff_N1_opt_no_spread"]
+ARGS = ["opt", "1_3_1_N3_with_spread_new_samp"]
 
 # now we save onto a folder
 #open("parameters.txt", "w") do file

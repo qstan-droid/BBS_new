@@ -551,11 +551,15 @@ function ml_ave(samples, N_ord, err_info, xbasis, measure, block_no, block_size,
     plus = tensor(xbasis[block_no][1], dagger(xbasis[block_no][1]))
     min = tensor(xbasis[block_no][2], dagger(xbasis[block_no][2]))
 
+    # prepare the states
+    plus_err_state = [C(l)*plus*dagger(C(l)) for l = 0:l_max]
+    min_err_state = [C(l)*min*dagger(C(l)) for l = 0:l_max]
+
     for n = 1:sample_no
         for i = 1:row
             for j = 1:col
-                parts[1] = sum(tr(abs(loss_pdf(nu_l, l, xbasis_l))*meas_op(samples[i, j, n])*C(l)*plus*dagger(C(l))) for l = 0:l_max)
-                parts[2] = sum(tr(abs(loss_pdf(nu_l, l, xbasis_l))*meas_op(samples[i, j, n])*C(l)*min*dagger(C(l))) for l = 0:l_max)
+                parts[1] = sum(tr(sparse(sparse(abs(loss_pdf(nu_l, l, xbasis_l))*meas_op(samples[i, j, n])*plus_err_state[l+1]))) for l = 0:l_max)
+                parts[2] = sum(tr(sparse(abs(loss_pdf(nu_l, l, xbasis_l))*meas_op(samples[i, j, n])*min_err_state[l+1])) for l = 0:l_max)
 
                 max_like_index = findmax(abs.(parts))[2]
 
